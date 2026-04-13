@@ -66,4 +66,4 @@ CREATE TABLE global_event_contributions (
 -- Indexes
 CREATE INDEX idx_market_listings_status ON market_listings(status) WHERE status = 'active';
 CREATE INDEX idx_market_listings_seller ON market_listings(seller_id);
-CREATE INDEX idx_global_events_active ON global_events(ends_at) WHERE ends_at > now();
+CREATE INDEX idx_global_events_active ON global_events(ends_at);
