@@ -1,0 +1,61 @@
+{
+  "name": "idle-vibes",
+  "displayName": "idle_vibes",
+  "description": "An idle colony game that lives in your IDE — powered by your actual coding activity.",
+  "version": "0.1.0",
+  "publisher": "idle-vibes",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "idleVibes.openColony",
+        "title": "Open Colony View",
+        "category": "idle_vibes"
+      },
+      {
+        "command": "idleVibes.showPerformanceStats",
+        "title": "Show Performance Stats",
+        "category": "idle_vibes"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "idle-vibes",
+          "title": "idle_vibes",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "idle-vibes": [
+        {
+          "type": "webview",
+          "id": "idleVibes.colonyView",
+          "name": "Colony"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "dev": "npm run build -- --watch",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "@idle-vibes/shared": "*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.0"
+  }
+}

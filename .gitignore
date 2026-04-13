@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+out/
+*.vsix
+
+# VS Code Extension secrets
+*.vsix.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+
+# Changeset temp
+.changeset/*.md
+!.changeset/config.json
+
+# Logs
+*.log
+npm-debug.log*
