@@ -14,6 +14,34 @@ set -e
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# Resolve the `code` CLI — it may not be in PATH
+resolve_code_cli() {
+  if command -v code &>/dev/null; then
+    echo "code"
+    return
+  fi
+  # macOS: VS Code installed in /Applications
+  local vscode_bin="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+  if [[ -x "$vscode_bin" ]]; then
+    echo "$vscode_bin"
+    return
+  fi
+  # macOS: Cursor
+  local cursor_bin="/Applications/Cursor.app/Contents/Resources/app/bin/code"
+  if [[ -x "$cursor_bin" ]]; then
+    echo "$cursor_bin"
+    return
+  fi
+  echo ""
+}
+
+CODE_CLI="$(resolve_code_cli)"
+if [[ -z "$CODE_CLI" ]]; then
+  echo "[idle_vibes] ERROR: could not find VS Code CLI."
+  echo "  Install it: Cmd+Shift+P → 'Shell Command: Install code command in PATH'"
+  exit 1
+fi
+
 cleanup() {
   echo ""
   echo "[idle_vibes] Shutting down..."
@@ -47,7 +75,7 @@ sleep 2
 
 # ── 4. Launch Extension Development Host ─────────────────────
 echo "[idle_vibes] Opening VS Code Extension Development Host..."
-code --extensionDevelopmentPath="$ROOT_DIR/packages/extension" "$ROOT_DIR"
+"$CODE_CLI" --extensionDevelopmentPath="$ROOT_DIR/packages/extension" "$ROOT_DIR"
 
 echo ""
 echo "  ✓ Vite dev server:   http://localhost:5175"
