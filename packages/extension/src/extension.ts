@@ -18,12 +18,12 @@ export function activate(context: vscode.ExtensionContext): void {
   if (devMode) {
     console.log('[idle_vibes] Running in development mode')
 
-    // Open the project folder as workspace if nothing is open
+    // Add the project folder to the workspace if nothing is open.
+    // The extension lives at <root>/packages/extension — project root is two levels up.
     if (!vscode.workspace.workspaceFolders?.length) {
-      const extensionDir = context.extensionUri.fsPath
-      // Extension is at <root>/packages/extension, project root is two levels up
-      const projectRoot = vscode.Uri.file(path.resolve(extensionDir, '..', '..'))
-      vscode.commands.executeCommand('vscode.openFolder', projectRoot, { forceNewWindow: false })
+      const projectRoot = vscode.Uri.file(path.resolve(context.extensionUri.fsPath, '..', '..'))
+      console.log(`[idle_vibes] No workspace folder open, adding: ${projectRoot.fsPath}`)
+      vscode.workspace.updateWorkspaceFolders(0, 0, { uri: projectRoot })
     }
   }
 
