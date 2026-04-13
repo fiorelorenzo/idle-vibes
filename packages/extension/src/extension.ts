@@ -80,11 +80,17 @@ export function activate(context: vscode.ExtensionContext): void {
     const watcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(mediaPath, '*.{js,css}'),
     )
-    watcher.onDidChange(() => {
-      console.log('[idle_vibes] UI assets changed, reloading webview...')
-      provider.reload()
-    })
-    watcher.onDidCreate(() => provider.reload())
+    // Debounce: vite writes multiple files per build, reload once after they settle
+    let reloadTimer: ReturnType<typeof setTimeout> | undefined
+    const debouncedReload = () => {
+      clearTimeout(reloadTimer)
+      reloadTimer = setTimeout(() => {
+        console.log('[idle_vibes] UI assets changed, reloading webview...')
+        provider.reload()
+      }, 500)
+    }
+    watcher.onDidChange(debouncedReload)
+    watcher.onDidCreate(debouncedReload)
     context.subscriptions.push(watcher)
 
     // Dev simulator

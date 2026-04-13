@@ -85,7 +85,7 @@ echo ""
 
 "$CODE_CLI" --new-window --wait \
   --extensionDevelopmentPath="$ROOT_DIR/packages/extension" \
-  "$ROOT_DIR"
+  --folder-uri="file://$ROOT_DIR"
 
 # When the Extension Development Host window closes, we reach here
 # and the EXIT trap handles cleanup.
