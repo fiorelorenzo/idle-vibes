@@ -7,6 +7,14 @@ import { VibeEngine } from './vibe/vibe-engine'
 import { GameEngine } from './game-engine'
 
 export function activate(context: vscode.ExtensionContext): void {
+  // Dev mode is enabled when running in the Extension Development Host
+  // (VS Code sets this automatically when launched via F5 / launch.json)
+  const devMode = context.extensionMode === vscode.ExtensionMode.Development
+
+  if (devMode) {
+    console.log('[idle_vibes] Running in development mode — webview loads from Vite dev server')
+  }
+
   const bridge = new ExtensionBridge()
   const storage = new LocalStateStorage(context.globalState)
   const parser = new SmartParser()
@@ -14,7 +22,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const gameEngine = new GameEngine(bridge, storage, parser, vibeEngine)
 
   // Register the sidebar webview
-  const provider = new ColonyViewProvider(context.extensionUri, bridge)
+  const provider = new ColonyViewProvider(context.extensionUri, bridge, devMode)
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(ColonyViewProvider.viewType, provider),
   )

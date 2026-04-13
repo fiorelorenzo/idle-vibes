@@ -7,10 +7,18 @@
     "packages/ui"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
+    "dev": "npm run build:shared && concurrently -k -n ext,ui -c blue,green \"npm run dev:extension\" \"npm run dev:ui\"",
+    "dev:extension": "npm run dev -w packages/extension",
+    "dev:ui": "npm run dev -w packages/ui",
+
+    "build": "npm run build:prod",
+    "build:prod": "npm run build:shared && npm run build:ui -- -- --mode production && npm run build:extension && npm run copy-ui",
+    "build:preview": "npm run build:shared && npm run build:ui -- -- --mode preview && npm run build:extension && npm run copy-ui",
     "build:shared": "npm run build -w packages/shared",
     "build:ui": "npm run build -w packages/ui",
     "build:extension": "npm run build -w packages/extension",
+    "copy-ui": "cp -r packages/ui/dist/ packages/extension/media/",
+
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint 'packages/*/src/**/*.ts' 'packages/*/src/**/*.svelte'",
@@ -18,12 +26,14 @@
     "format": "prettier --write 'packages/*/src/**/*.{ts,svelte,json}'",
     "format:check": "prettier --check 'packages/*/src/**/*.{ts,svelte,json}'",
     "changeset": "changeset",
-    "typecheck": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/extension/tsconfig.json"
+    "typecheck": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/extension/tsconfig.json",
+    "package": "npm run build:prod && npm run package -w packages/extension"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
+    "concurrently": "^9.0.0",
     "eslint": "^9.0.0",
     "prettier": "^3.3.0",
     "typescript": "^5.5.0",

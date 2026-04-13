@@ -1,12 +1,15 @@
 import * as vscode from 'vscode'
 import { ExtensionBridge } from './bridge/host'
 
+const DEV_SERVER_URL = 'http://localhost:5175'
+
 export class ColonyViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'idleVibes.colonyView'
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly bridge: ExtensionBridge,
+    private readonly devMode: boolean = false,
   ) {}
 
   resolveWebviewView(
@@ -16,18 +19,54 @@ export class ColonyViewProvider implements vscode.WebviewViewProvider {
   ): void {
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')],
+      localResourceRoots: this.devMode
+        ? undefined // allow all origins in dev
+        : [vscode.Uri.joinPath(this.extensionUri, 'media')],
     }
 
     this.bridge.attach(webviewView.webview)
-    webviewView.webview.html = this.getHtml(webviewView.webview)
+    webviewView.webview.html = this.devMode
+      ? this.getDevHtml()
+      : this.getProdHtml(webviewView.webview)
   }
 
-  private getHtml(webview: vscode.Webview): string {
+  /**
+   * Dev mode: loads from the Vite dev server at localhost:5173.
+   * HMR works out of the box — edits to Svelte components reflect instantly.
+   *
+   * CSP is relaxed to allow connections to the dev server and inline styles
+   * injected by Vite/HMR.
+   */
+  private getDevHtml(): string {
+    return /* html */ `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'none';
+      style-src 'unsafe-inline';
+      script-src 'unsafe-inline' ${DEV_SERVER_URL};
+      connect-src ${DEV_SERVER_URL} ws://localhost:5175;
+      img-src data: ${DEV_SERVER_URL};
+      font-src ${DEV_SERVER_URL};">
+  <title>idle_vibes [DEV]</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="${DEV_SERVER_URL}/@vite/client"></script>
+  <script type="module" src="${DEV_SERVER_URL}/src/main.ts"></script>
+</body>
+</html>`
+  }
+
+  /**
+   * Production mode: loads pre-built assets from media/.
+   * Strict CSP with nonce-based script loading.
+   */
+  private getProdHtml(webview: vscode.Webview): string {
     const nonce = getNonce()
 
-    // In production, the UI is built by Vite and copied to media/
-    // During development, the Svelte dev server is used
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, 'media', 'assets', 'index.js'),
     )

@@ -1,0 +1,48 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev: build extension",
+      "type": "npm",
+      "script": "build:shared",
+      "group": "build",
+      "problemMatcher": "$tsc",
+      "dependsOn": []
+    },
+    {
+      "label": "dev: watch extension",
+      "type": "npm",
+      "script": "dev:extension",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "." },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "build finished"
+        }
+      }
+    },
+    {
+      "label": "dev: vite",
+      "type": "npm",
+      "script": "dev:ui",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "." },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "ready in"
+        }
+      }
+    },
+    {
+      "label": "build: all",
+      "type": "npm",
+      "script": "build:prod",
+      "group": "build",
+      "problemMatcher": "$tsc"
+    }
+  ]
+}
