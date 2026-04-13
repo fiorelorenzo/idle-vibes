@@ -75,7 +75,7 @@ sleep 1
 
 # ── 4. Launch Extension Development Host ─────────────────────
 echo "[idle_vibes] Opening VS Code Extension Development Host..."
-"$CODE_CLI" --extensionDevelopmentPath="$ROOT_DIR/packages/extension" "$ROOT_DIR"
+"$CODE_CLI" --new-window --extensionDevelopmentPath="$ROOT_DIR/packages/extension" "$ROOT_DIR"
 
 cat <<'BANNER'
 

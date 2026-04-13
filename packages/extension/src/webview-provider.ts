@@ -45,6 +45,10 @@ export class ColonyViewProvider implements vscode.WebviewViewProvider {
       vscode.Uri.joinPath(this.extensionUri, 'media', 'assets', 'index.css'),
     )
 
+    // CSP notes:
+    // - script-src needs cspSource for dynamic imports (PixiJS code-split chunks)
+    //   and 'unsafe-eval' for WebGL shader compilation
+    // - worker-src for PixiJS web workers
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,7 +57,8 @@ export class ColonyViewProvider implements vscode.WebviewViewProvider {
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'none';
       style-src ${webview.cspSource} 'unsafe-inline';
-      script-src 'nonce-${nonce}';
+      script-src ${webview.cspSource} 'unsafe-eval';
+      worker-src ${webview.cspSource} blob:;
       img-src ${webview.cspSource} data:;
       font-src ${webview.cspSource};">
   <link rel="stylesheet" href="${styleUri}">
@@ -61,7 +66,7 @@ export class ColonyViewProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div id="app"></div>
-  <script nonce="${nonce}" src="${scriptUri}"></script>
+  <script src="${scriptUri}"></script>
 </body>
 </html>`
   }
