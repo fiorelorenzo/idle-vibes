@@ -26,6 +26,11 @@ coverage/
 .changeset/*.md
 !.changeset/config.json
 
+# Environment (keep only .env.example)
+.env
+.env.*
+!.env.example
+
 # Logs
 *.log
 npm-debug.log*
