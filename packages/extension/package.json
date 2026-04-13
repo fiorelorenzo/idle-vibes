@@ -24,8 +24,80 @@
         "command": "idleVibes.showPerformanceStats",
         "title": "Show Performance Stats",
         "category": "idle_vibes"
+      },
+      {
+        "command": "idleVibes.sim.aiBurst",
+        "title": "Simulate AI Burst",
+        "category": "idle_vibes [DEV]",
+        "enablement": "isExtensionDevelopmentHost"
+      },
+      {
+        "command": "idleVibes.sim.bugIntroduced",
+        "title": "Simulate Bug Introduced",
+        "category": "idle_vibes [DEV]",
+        "enablement": "isExtensionDevelopmentHost"
+      },
+      {
+        "command": "idleVibes.sim.bugFixed",
+        "title": "Simulate Bug Fixed",
+        "category": "idle_vibes [DEV]",
+        "enablement": "isExtensionDevelopmentHost"
+      },
+      {
+        "command": "idleVibes.sim.commitFeat",
+        "title": "Simulate Commit (feat)",
+        "category": "idle_vibes [DEV]",
+        "enablement": "isExtensionDevelopmentHost"
+      },
+      {
+        "command": "idleVibes.sim.commitFix",
+        "title": "Simulate Commit (fix)",
+        "category": "idle_vibes [DEV]",
+        "enablement": "isExtensionDevelopmentHost"
+      },
+      {
+        "command": "idleVibes.sim.flowSession",
+        "title": "Simulate Flow Session",
+        "category": "idle_vibes [DEV]",
+        "enablement": "isExtensionDevelopmentHost"
+      },
+      {
+        "command": "idleVibes.sim.stopFlow",
+        "title": "Stop Flow Simulation",
+        "category": "idle_vibes [DEV]",
+        "enablement": "isExtensionDevelopmentHost"
       }
     ],
+    "configuration": {
+      "title": "idle_vibes",
+      "properties": {
+        "idleVibes.parser.exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/out/**",
+            "**/.git/**",
+            "**/coverage/**",
+            "**/.next/**",
+            "**/__pycache__/**",
+            "**/build/**",
+            "**/*.min.js",
+            "**/package-lock.json",
+            "**/yarn.lock",
+            "**/pnpm-lock.yaml"
+          ],
+          "markdownDescription": "Glob patterns for files the parser should ignore. Changes in these files won't generate resources or affect the Vibe."
+        },
+        "idleVibes.parser.include": {
+          "type": ["array", "null"],
+          "items": { "type": "string" },
+          "default": null,
+          "markdownDescription": "If set, only files matching these glob patterns will be monitored. `null` means all files (minus excludes)."
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         {

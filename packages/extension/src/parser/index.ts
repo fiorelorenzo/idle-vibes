@@ -4,6 +4,7 @@ import { PILLAR_C_DEBOUNCE_MS } from '@idle-vibes/shared'
 import { PillarA } from './pillarA'
 import { PillarB } from './pillarB'
 import { PillarC } from './pillarC'
+import { WorkspaceFilter } from './workspace-filter'
 
 type SignalListener = (signal: ParserSignal) => void
 
@@ -11,12 +12,13 @@ type SignalListener = (signal: ParserSignal) => void
  * The Smart Parser — unified coordinator for Pillars A, B, C.
  *
  * Listens to VS Code events, throttles/debounces per GDD spec,
- * and emits ParserSignals to the game engine.
+ * filters by workspace rules, and emits ParserSignals to the game engine.
  */
 export class SmartParser {
   private readonly pillarA = new PillarA()
   private readonly pillarB = new PillarB()
   private readonly pillarC = new PillarC()
+  private readonly filter = new WorkspaceFilter()
   private readonly listeners: SignalListener[] = []
   private lastTextChangeAt = 0
   private lastKnownCommit: string | null = null
@@ -34,6 +36,14 @@ export class SmartParser {
     })
   }
 
+  /**
+   * Inject a signal directly — used by the DevSimulator and by
+   * non-leader instances forwarding signals.
+   */
+  inject(signal: ParserSignal): void {
+    this.emit(signal)
+  }
+
   private emit(signal: ParserSignal): void {
     for (const listener of this.listeners) {
       listener(signal)
@@ -43,9 +53,11 @@ export class SmartParser {
   start(): vscode.Disposable {
     const disposables: vscode.Disposable[] = []
 
-    // Pillar A: text change events
+    // Pillar A: text change events — filtered by workspace rules
     disposables.push(
       vscode.workspace.onDidChangeTextDocument((event) => {
+        if (!this.filter.shouldMonitor(event.document)) return
+
         this.lastActivityAt = Date.now()
         const now = Date.now()
         const duration = now - this.lastTextChangeAt
@@ -65,9 +77,11 @@ export class SmartParser {
       }),
     )
 
-    // Pillar B: diagnostics on save
+    // Pillar B: diagnostics on save — filtered by workspace rules
     disposables.push(
-      vscode.workspace.onDidSaveTextDocument(() => {
+      vscode.workspace.onDidSaveTextDocument((document) => {
+        if (!this.filter.shouldMonitor(document)) return
+
         this.lastActivityAt = Date.now()
 
         const event = this.pillarB.createEvent()

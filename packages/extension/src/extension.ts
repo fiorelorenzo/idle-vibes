@@ -5,14 +5,24 @@ import { LocalStateStorage } from './storage/local-state'
 import { SmartParser } from './parser/index'
 import { VibeEngine } from './vibe/vibe-engine'
 import { GameEngine } from './game-engine'
+import { InstanceLock } from './instance-lock'
+import { DevSimulator } from './parser/dev-simulator'
 
 export function activate(context: vscode.ExtensionContext): void {
-  // Dev mode is enabled when running in the Extension Development Host
-  // (VS Code sets this automatically when launched via F5 / launch.json)
   const devMode = context.extensionMode === vscode.ExtensionMode.Development
 
-  if (devMode) {
-    console.log('[idle_vibes] Running in development mode — webview loads from Vite dev server')
+  // ── Instance coordination ──────────────────────────────────
+  // Multiple VS Code windows may each run idle_vibes. Only the leader
+  // instance owns the colony state. Non-leaders still parse but their
+  // signals are discarded (they see the colony in read-only mode).
+  const lock = new InstanceLock()
+  context.subscriptions.push(lock.start())
+
+  if (!lock.isLeader) {
+    console.log(
+      `[idle_vibes] Another instance is leading the colony. ` +
+      `This instance (${lock.instanceId}) runs in observer mode.`,
+    )
   }
 
   const bridge = new ExtensionBridge()
@@ -21,43 +31,54 @@ export function activate(context: vscode.ExtensionContext): void {
   const vibeEngine = new VibeEngine()
   const gameEngine = new GameEngine(bridge, storage, parser, vibeEngine)
 
-  // Register the sidebar webview
+  // ── Webview ────────────────────────────────────────────────
   const provider = new ColonyViewProvider(context.extensionUri, bridge, devMode)
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(ColonyViewProvider.viewType, provider),
   )
 
-  // Register commands
+  // ── Commands ───────────────────────────────────────────────
   context.subscriptions.push(
     vscode.commands.registerCommand('idleVibes.openColony', () => {
       vscode.commands.executeCommand('idleVibes.colonyView.focus')
     }),
-  )
-
-  context.subscriptions.push(
     vscode.commands.registerCommand('idleVibes.showPerformanceStats', () => {
       gameEngine.showPerformanceStats()
     }),
   )
 
-  // Start the parser and game engine
+  // ── Parser + game engine ───────────────────────────────────
   context.subscriptions.push(parser.start())
   context.subscriptions.push(gameEngine.start())
 
-  // Listen for parser signals → forward to game engine
   context.subscriptions.push(
     parser.onSignal((signal) => {
-      gameEngine.handleParserSignal(signal)
+      // Only the leader processes game logic.
+      // All instances forward signals to the webview for visual feedback.
+      if (lock.isLeader) {
+        gameEngine.handleParserSignal(signal)
+      }
       bridge.send({ type: 'ext:parser-signal', signal })
     }),
   )
 
-  // Listen for webview messages
   context.subscriptions.push(
     bridge.onMessage((msg) => {
-      gameEngine.handleWebviewMessage(msg)
+      if (lock.isLeader) {
+        gameEngine.handleWebviewMessage(msg)
+      }
     }),
   )
+
+  // ── Dev simulator (only in Extension Development Host) ─────
+  if (devMode) {
+    console.log('[idle_vibes] Dev mode — simulator commands available in command palette')
+    const simulator = new DevSimulator((signal) => {
+      parser.inject(signal)
+    })
+    simulator.register(context)
+    context.subscriptions.push(new vscode.Disposable(() => simulator.dispose()))
+  }
 }
 
 export function deactivate(): void {
