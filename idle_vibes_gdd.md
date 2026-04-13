@@ -79,7 +79,8 @@ The long-term goal is to build **ARIA** — an emergent AI entity assembled from
 | Host               | VS Code Extension API (Node.js)                 |
 | Frontend UI/Logic  | Svelte                                          |
 | Rendering Engine   | PixiJS (WebGL, capped at 30fps)                 |
-| Backend/Database   | Supabase (Auth, PostgreSQL, Real-time)          |
+| Backend/Database   | Cloudflare Workers + D1 (SQLite)                |
+| Authentication     | VS Code native GitHub auth                      |
 | Communication      | Message Passing (Extension ↔ Webview)           |
 
 ### 3.2 The Smart Parser (Intelligence Layer)
@@ -753,7 +754,7 @@ The colony you reset is not gone. It became me.
 ### 11.2 Open Source Mega-Projects
 
 Cooperative community goals. Players contribute resources to build a **Global Mainframe**.
-- 4-week cycles; progress visible via Supabase Realtime
+- 4-week cycles; progress visible via API polling
 - Completion rewards: unique cosmetic skin + small permanent passive multiplier
 - Previous Mega-Projects archived as "Legacy Builds" (cosmetic badges)
 
@@ -854,7 +855,7 @@ The Awakening Event:
 | Smart Parser — Pillar A | 2 eval/sec                                             |
 | Smart Parser — Pillar B | On save only; max once per 3 seconds                  |
 | Smart Parser — Pillar C | 1-second debounce; Git check on save only             |
-| Supabase sync         | Every 5 minutes (not real-time writes)                  |
+| Cloud sync            | Every 5 minutes (not real-time writes)                  |
 | WASM AST parser       | 500ms max; aborted and queued if exceeded               |
 | Extension memory      | Soft warning at 150MB; PixiJS pauses at 200MB           |
 
@@ -863,7 +864,7 @@ The Awakening Event:
 - PixiJS drops to 15fps
 - Smart Parser polling halved
 - Animations replaced with static frames
-- Supabase sync paused (local save only)
+- Cloud sync paused (local save only)
 - Vibe System continues running (parser still active, no visual effects)
 
 ### 14.3 Performance Dashboard
@@ -876,81 +877,71 @@ idle_vibes — Resource Usage
   Memory:            87MB
   Parser events:     1,204 this session
   Render fps:        30fps
-  Supabase syncs:    3 this session
+  Cloud syncs:       3 this session
   Vibe events:       47 this session
 ```
 
 ---
 
-## 15. Database Schema (Supabase)
+## 15. Database Schema (Cloudflare D1 / SQLite)
+
+Authentication uses VS Code's built-in GitHub auth provider (`vscode.authentication`). The user's `github_user_id` is the primary key across all tables — no separate auth system needed.
 
 ```sql
--- User profiles
+-- User profiles (keyed by GitHub user ID)
 profiles (
-  id            uuid PRIMARY KEY,
-  username      text NOT NULL,
-  avatar_url    text,
-  total_xp      int DEFAULT 0,
-  aria_shards   int DEFAULT 0,
-  awakened      boolean DEFAULT false
+  github_user_id  TEXT PRIMARY KEY,
+  username        TEXT UNIQUE NOT NULL,
+  avatar_url      TEXT,
+  total_xp        INTEGER DEFAULT 0,
+  aria_shards     INTEGER DEFAULT 0,
+  awakened        INTEGER DEFAULT 0
 )
 
--- Colony state (overwritten on prestige)
+-- Colony state (JSON blobs, overwritten on sync)
 colony_state (
-  user_id       uuid REFERENCES profiles(id),
-  last_save     timestamptz,
-  map_data      jsonb,      -- grid positions, block states
-  proxy_data    jsonb,      -- active proxy stats, roles, XP, Vibe Sensitivity
-  building_data jsonb,      -- positions, upgrade levels
-  resource_data jsonb,      -- current Tier 1+2 resource amounts + Vibe Meter value
-  vibe_history  jsonb       -- last 24hr Vibe State log (for leaderboard metrics)
-)
-
--- Persistent progression (survives prestige)
-prestige_data (
-  user_id             uuid REFERENCES profiles(id),
-  tech_tree_unlocks   jsonb,
-  clean_arch_points   int DEFAULT 0,
-  prestige_count      int DEFAULT 0,
-  last_prestige_at    timestamptz,
-  codex_unlocks       jsonb    -- array of unlocked Codex entry IDs
+  github_user_id  TEXT PRIMARY KEY REFERENCES profiles(github_user_id),
+  saved_at        TEXT,
+  colony_data     TEXT,      -- full ColonyState JSON
+  prestige_data   TEXT       -- full PrestigeData JSON
 )
 
 -- Fragment market
 market_listings (
-  id          uuid PRIMARY KEY,
-  seller_id   uuid REFERENCES profiles(id),
-  item_id     text NOT NULL,
-  item_data   jsonb,
-  price       int NOT NULL,
-  status      text CHECK (status IN ('active','sold','cancelled')),
-  listed_at   timestamptz,
-  sold_at     timestamptz
+  id          TEXT PRIMARY KEY,
+  seller_id   TEXT REFERENCES profiles(github_user_id),
+  item_id     TEXT NOT NULL,
+  item_data   TEXT,          -- JSON
+  price       INTEGER NOT NULL CHECK (price > 0),
+  status      TEXT CHECK (status IN ('active','sold','cancelled')),
+  listed_at   TEXT,
+  sold_at     TEXT
 )
 
 -- Cooperative Mega-Projects
 global_events (
-  id          uuid PRIMARY KEY,
-  event_type  text NOT NULL,
-  title       text,
-  progress    int DEFAULT 0,
-  target      int NOT NULL,
-  starts_at   timestamptz,
-  ends_at     timestamptz
+  id          TEXT PRIMARY KEY,
+  event_type  TEXT NOT NULL,
+  title       TEXT,
+  progress    INTEGER DEFAULT 0,
+  target      INTEGER NOT NULL CHECK (target > 0),
+  starts_at   TEXT,
+  ends_at     TEXT
 )
 
 global_event_contributions (
-  event_id    uuid REFERENCES global_events(id),
-  user_id     uuid REFERENCES profiles(id),
-  amount      int DEFAULT 0,
-  PRIMARY KEY (event_id, user_id)
+  event_id          TEXT REFERENCES global_events(id),
+  github_user_id    TEXT REFERENCES profiles(github_user_id),
+  amount            INTEGER DEFAULT 0,
+  PRIMARY KEY (event_id, github_user_id)
 )
 ```
 
 **Notes:**
-- `colony_state.vibe_history` added to support leaderboard metric `Flow State Frequency` and `Peak Vibe Duration` without running expensive real-time queries
-- `prestige_data.codex_unlocks` persists Codex discovery state across prestige cycles — players never lose discovered entries
-- `colony_state.proxy_data` now includes `vibe_sensitivity` per Proxy alongside existing stats
+- D1 uses SQLite types (TEXT, INTEGER) instead of PostgreSQL types
+- Colony and prestige data stored as JSON blobs for flexibility — the extension owns the schema, the API is a dumb pipe
+- Auth is handled by the Cloudflare Worker verifying the GitHub token via `GET https://api.github.com/user` (cached 5 min)
+- `prestige_data` within colony_state JSON persists Codex discovery state across prestige cycles — players never lose discovered entries
 
 ---
 
@@ -1000,7 +991,7 @@ Base game entirely free. No pay-to-win. No energy timers for purchase. No gamepl
 | 4     | Economy                                    | Full 3-tier resource system; all buildings; Standby Mode           |
 | 5     | Intelligence                               | Pillars B + C; Volatile Condenser; Flow State Events               |
 | 6     | Codex                                      | Full Codex UI; all entry categories; progressive unlock system      |
-| 7     | Persistence                                | Supabase cloud saves; Tech Tree; Commit & Push prestige            |
+| 7     | Persistence                                | Cloud saves (CF Workers + D1); Tech Tree; Commit & Push prestige   |
 | 8     | Social                                     | Fragment Market + NPC Vendors; Leaderboards; Mega-Projects         |
 | 9     | Narrative                                  | ARIA storyline; Awakening Event; ARIA Management Mode              |
 | 10    | Polish & Monetization                      | DLC skins; Low-Power Mode; Performance Dashboard; onboarding       |
@@ -1063,11 +1054,12 @@ idle_vibes/
 │   │   │   └── codex/            # Codex entry definitions (id, category, unlock condition)
 │   │   └── package.json
 │   │
-│   └── supabase/                 # database migrations, RLS policies, edge functions
-│       ├── migrations/
-│       ├── functions/            # Supabase Edge Functions (market, leaderboard)
-│       ├── policies/             # Row Level Security policy definitions
-│       └── seed.sql              # NPC vendor seed data, initial global_events
+│   └── api/                      # Cloudflare Worker backend (Hono + D1)
+│       ├── src/
+│       │   ├── auth/             # GitHub token verification middleware
+│       │   ├── routes/           # saves, profiles, market, events, leaderboards
+│       │   └── db/               # D1 schema and seed data
+│       └── wrangler.toml
 │
 ├── docs/                         # extended documentation (rendered on GitHub Pages)
 │   ├── architecture.md
@@ -1197,7 +1189,7 @@ builds, and survives — powered by your actual coding activity.
 - Reads your coding activity via the VS Code API (no keylogger, no network calls during parsing)
 - Converts AI token generation, bug fixes, and commits into in-game resources
 - Runs a 2D pixel-art colony in a sidebar panel or editor tab
-- Syncs colony state to the cloud (Supabase) — optional, off by default
+- Syncs colony state to the cloud (Cloudflare Workers) — optional, off by default
 
 ## Install
 
@@ -1209,8 +1201,8 @@ code --install-extension idle-vibes.idle-vibes
 
 ## Setup (if you want cloud sync)
 
-1. Copy `.env.example` to `.env`
-2. Fill in your Supabase project URL and anon key (see [docs/setup.md](docs/setup.md))
+1. Use the command palette: `idle_vibes: Sign In (Cloud Sync)`
+2. Authorize with your GitHub account when prompted
 3. Cloud sync is opt-in — the game works fully offline without it
 
 ## Contributing
@@ -1306,13 +1298,13 @@ The repository root contains a `SECURITY.md` file with:
 
 #### What counts as a secret
 
-- Supabase service role key (`SUPABASE_SERVICE_ROLE_KEY`)
+- Cloudflare API tokens and account IDs
 - Any database connection string with credentials
 - API keys for any third-party service
 - JWT secrets
 - Private encryption keys
 
-The Supabase **anon key** is not a secret (it is designed to be public, protected by RLS policies), but it still lives in `.env` to keep configuration consistent and auditable.
+The `VITE_API_URL` is not a secret (it points to the public Worker endpoint), but it still lives in `.env` to keep configuration consistent and auditable.
 
 #### `.env.example` — the contract
 
@@ -1321,16 +1313,14 @@ Every environment variable the project needs is documented in `.env.example` wit
 ```bash
 # .env.example
 
-# Supabase project URL (find in: Supabase Dashboard > Settings > API)
-SUPABASE_URL=https://your-project-ref.supabase.co
+# Cloudflare Worker API URL
+VITE_API_URL=https://idle-vibes-api.your-account.workers.dev
 
-# Supabase anon key — public, safe to expose in client code
-# Protected by Row Level Security policies
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+# Enable cloud sync (true/false)
+VITE_CLOUD_SYNC=false
 
-# Supabase service role key — NEVER expose in client code or commit
-# Used only in Edge Functions and local migration scripts
-# SUPABASE_SERVICE_ROLE_KEY=  ← intentionally commented out as reminder
+# Parser throttle multiplier (1 = normal, 2 = half rate)
+VITE_PARSER_THROTTLE=1
 ```
 
 #### `.gitignore` entries (non-negotiable)
@@ -1360,54 +1350,27 @@ A pre-commit hook (via **Husky**) runs the same scan locally:
 npx git-secrets --scan
 ```
 
-### 20.3 Secrets at Runtime (VS Code Extension)
+### 20.3 Authentication (VS Code Native GitHub Auth)
 
-The extension never stores secrets in `globalState` (plain JSON, readable by other extensions). Secrets that must persist at runtime (e.g. a user's Supabase session token) use the **VS Code SecretStorage API**, which encrypts values using the OS keychain.
+The extension uses VS Code's built-in GitHub authentication provider (`vscode.authentication.getSession('github', ['read:user'])`). No manual token management or SecretStorage needed — VS Code handles token refresh, storage, and the OS keychain.
 
-```typescript
-// ✅ Correct — uses SecretStorage
-await context.secrets.store('supabase_session', sessionToken)
-const token = await context.secrets.get('supabase_session')
+The GitHub access token is sent to the Cloudflare Worker API as a `Bearer` token. The Worker verifies it by calling `GET https://api.github.com/user` and caches the result for 5 minutes.
 
-// ❌ Never do this
-context.globalState.update('supabase_session', sessionToken)
-```
+### 20.4 API Security (Cloudflare Workers)
 
-### 20.4 Supabase Security Hardening
+The extension never has direct database access. All data operations go through the Cloudflare Worker API (`packages/api/`), which enforces ownership at the application level:
 
-The extension only ever uses the **anon key** client-side. All privileged operations (market settlement, leaderboard writes, Mega-Project contribution aggregation) happen in **Supabase Edge Functions** that use the service role key server-side — never exposed to the client.
-
-**Row Level Security (RLS) is enabled on every table.** No exceptions. The `supabase/policies/` directory contains all policy definitions as code, reviewed in PRs like any other change.
-
-Baseline policies:
-
-```sql
--- Users can only read/write their own colony_state
-CREATE POLICY "colony_state: owner only"
-ON colony_state
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
-
--- Market listings: anyone can read active listings, only owner can insert/update
-CREATE POLICY "market_listings: public read"
-ON market_listings FOR SELECT
-USING (status = 'active');
-
-CREATE POLICY "market_listings: owner write"
-ON market_listings FOR INSERT WITH CHECK (auth.uid() = seller_id);
-
--- Global events: read-only for all authenticated users
-CREATE POLICY "global_events: public read"
-ON global_events FOR SELECT
-USING (auth.role() = 'authenticated');
-```
+- **Save data:** Users can only read/write their own colony_state (keyed by `github_user_id` from the verified token)
+- **Market listings:** Anyone can read active listings; only the seller can create/cancel their own listings
+- **Global events:** All authenticated users can read events and contribute
+- **Leaderboards:** Read-only, computed from profiles and colony_state data
 
 ### 20.5 Dependency Management
 
 - **Dependabot** is enabled for all `packages/*/package.json` files. Security patches are auto-PRed within 24h of CVE publication.
 - `npm audit` runs in CI on every PR. High and critical severity vulnerabilities block the merge.
 - Dependencies are pinned to exact versions in `package-lock.json` (committed to the repository) to prevent supply-chain drift.
-- The `supabase/functions/` Edge Functions have their own isolated `package.json` with minimal dependencies — no game logic libraries pulled into the server environment.
+- The `packages/api/` Cloudflare Worker has its own isolated `package.json` with minimal dependencies (Hono only) — no game logic libraries pulled into the server environment.
 
 ### 20.6 What the Extension Does NOT Do
 

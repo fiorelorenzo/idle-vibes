@@ -12,6 +12,8 @@ export type ExtensionMessage =
   | { type: 'ext:state-sync'; state: GameState }
   | { type: 'ext:standby-enter' }
   | { type: 'ext:standby-exit' }
+  | { type: 'ext:auth-status'; authenticated: boolean; username?: string; avatarUrl?: string }
+  | { type: 'ext:sync-status'; syncing: boolean; lastSyncAt: number | null }
 
 export type WebviewMessage =
   | { type: 'ui:ready' }
@@ -19,6 +21,7 @@ export type WebviewMessage =
   | { type: 'ui:colony-action'; action: ColonyAction }
   | { type: 'ui:update-settings'; settings: Partial<GameSettings> }
   | { type: 'ui:prestige' }
+  | { type: 'ui:enable-cloud-sync' }
 
 export type ColonyAction =
   | { kind: 'place_building'; buildingId: string; position: { x: number; y: number } }

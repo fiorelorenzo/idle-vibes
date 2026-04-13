@@ -26,6 +26,16 @@
         "category": "idle_vibes"
       },
       {
+        "command": "idleVibes.signIn",
+        "title": "Sign In (Cloud Sync)",
+        "category": "idle_vibes"
+      },
+      {
+        "command": "idleVibes.signOut",
+        "title": "Sign Out (Cloud Sync)",
+        "category": "idle_vibes"
+      },
+      {
         "command": "idleVibes.reloadWebview",
         "title": "Reload Webview",
         "category": "idle_vibes [DEV]",

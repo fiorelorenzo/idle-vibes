@@ -8,6 +8,7 @@ import { VibeEngine } from './vibe/vibe-engine'
 import { GameEngine } from './game-engine'
 import { InstanceLock } from './instance-lock'
 import { DevSimulator } from './parser/dev-simulator'
+import { CloudSyncService } from './cloud/sync-service'
 
 export function activate(context: vscode.ExtensionContext): void {
   const devMode = context.extensionMode === vscode.ExtensionMode.Development
@@ -44,6 +45,19 @@ export function activate(context: vscode.ExtensionContext): void {
   const vibeEngine = new VibeEngine()
   const gameEngine = new GameEngine(bridge, storage, parser, vibeEngine)
 
+  // ── Cloud sync ─────────────────────────────────────────────
+  const apiUrl = process.env.VITE_API_URL ?? 'http://127.0.0.1:8787'
+  const cloudSync = new CloudSyncService(apiUrl)
+  gameEngine.setCloudSync(cloudSync)
+  context.subscriptions.push(cloudSync)
+
+  // Auto-restore cloud session if sync was previously enabled
+  if (gameEngine.getState().settings.cloudSyncEnabled) {
+    cloudSync.enable().catch(() => {
+      // If restore fails, keep going offline
+    })
+  }
+
   // ── Webview ────────────────────────────────────────────────
   const provider = new ColonyViewProvider(context.extensionUri, bridge)
   context.subscriptions.push(
@@ -61,6 +75,18 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('idleVibes.reloadWebview', () => {
       provider.reload()
       vscode.window.showInformationMessage('[idle_vibes] Webview reloaded')
+    }),
+    vscode.commands.registerCommand('idleVibes.signIn', async () => {
+      const identity = await cloudSync.auth.signIn()
+      if (identity) {
+        await cloudSync.enable()
+        vscode.window.showInformationMessage(`[idle_vibes] Signed in as ${identity.username}`)
+      }
+    }),
+    vscode.commands.registerCommand('idleVibes.signOut', () => {
+      cloudSync.disable()
+      cloudSync.auth.signOut()
+      vscode.window.showInformationMessage('[idle_vibes] Signed out from cloud sync')
     }),
   )
 

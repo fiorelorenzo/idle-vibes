@@ -33,7 +33,7 @@ The following are considered security issues:
 - Data exfiltration (the extension reading or transmitting file contents, code, or file paths)
 - Secret leakage (API keys, tokens, or credentials exposed in logs, state, or network requests)
 - Unauthorized network calls (any network activity not explicitly initiated by the user via cloud sync)
-- Supabase RLS policy bypass
+- API authorization bypass (accessing other users' data)
 - Dependency vulnerabilities rated High or Critical by npm audit
 - Extension permission escalation beyond declared activationEvents and contributes
 
@@ -45,5 +45,5 @@ The following are **not** in scope:
 
 ## Security design
 
-For details on how secrets, environment variables, and Supabase security are handled,
+For details on how secrets, environment variables, and API security are handled,
 see the [Game Design Document](idle_vibes_gdd.md), sections 20.2-20.6.

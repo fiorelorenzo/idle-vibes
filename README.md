@@ -11,7 +11,7 @@ builds, and survives — powered by your actual coding activity.
 - Reads your coding activity via the VS Code API (no keylogger, no network calls during parsing)
 - Converts AI token generation, bug fixes, and commits into in-game resources
 - Runs a 2D pixel-art colony in a sidebar panel or editor tab
-- Syncs colony state to the cloud (Supabase) — optional, off by default
+- Syncs colony state to the cloud — optional, off by default
 
 What the extension does **not** do:
 
@@ -30,8 +30,8 @@ code --install-extension idle-vibes.idle-vibes
 
 ## Setup (if you want cloud sync)
 
-1. Copy `.env.example` to `.env`
-2. Fill in your Supabase project URL and anon key (see [docs/setup.md](docs/setup.md))
+1. Open the command palette: `idle_vibes: Sign In (Cloud Sync)`
+2. Authorize with your GitHub account when prompted
 3. Cloud sync is opt-in — the game works fully offline without it
 
 ## Project structure
@@ -43,6 +43,7 @@ This is a monorepo with npm workspaces:
 | `packages/shared` | Types, constants, and Codex definitions shared across packages |
 | `packages/extension` | VS Code extension host — Smart Parser, bridge, storage |
 | `packages/ui` | Svelte + PixiJS webview — rendering, stores, components |
+| `packages/api` | Cloudflare Worker backend — Hono + D1 (saves, market, leaderboards) |
 
 ## Development
 

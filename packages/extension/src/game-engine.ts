@@ -27,6 +27,7 @@ import { ExtensionBridge } from './bridge/host'
 import { LocalStateStorage } from './storage/local-state'
 import { SmartParser } from './parser/index'
 import { VibeEngine } from './vibe/vibe-engine'
+import type { CloudSyncService } from './cloud/sync-service'
 
 const TICK_INTERVAL_MS = 1000
 const SAVE_INTERVAL_MS = 30_000
@@ -44,7 +45,9 @@ export class GameEngine {
   /** Performance tracking */
   private parserEventsThisSession = 0
   private vibeEventsThisSession = 0
-  private supabaseSyncsThisSession = 0
+
+
+  private cloudSync: CloudSyncService | null = null
 
   constructor(
     private readonly bridge: ExtensionBridge,
@@ -120,6 +123,9 @@ export class GameEngine {
         break
       case 'ui:prestige':
         this.performPrestige()
+        break
+      case 'ui:enable-cloud-sync':
+        this.enableCloudSync()
         break
     }
   }
@@ -611,6 +617,38 @@ export class GameEngine {
     this.save()
   }
 
+  setCloudSync(sync: CloudSyncService): void {
+    this.cloudSync = sync
+
+    sync.onDidSync(() => {
+      if (this.state.settings.cloudSyncEnabled) {
+        sync.save(this.state)
+      }
+    })
+
+    sync.auth.onDidChangeAuth((identity) => {
+      this.bridge.send({
+        type: 'ext:auth-status',
+        authenticated: identity !== null,
+        username: identity?.username,
+        avatarUrl: identity?.avatarUrl,
+      })
+    })
+  }
+
+  private async enableCloudSync(): Promise<void> {
+    if (!this.cloudSync) return
+    const ok = await this.cloudSync.enable()
+    if (ok) {
+      this.state.settings.cloudSyncEnabled = true
+      this.syncState()
+    }
+  }
+
+  getState(): GameState {
+    return this.state
+  }
+
   showPerformanceStats(): void {
     const memUsage = process.memoryUsage()
     const mb = Math.round(memUsage.heapUsed / 1024 / 1024)
@@ -621,7 +659,7 @@ export class GameEngine {
     panel.appendLine(`  Memory:            ${mb}MB`)
     panel.appendLine(`  Parser events:     ${this.parserEventsThisSession} this session`)
     panel.appendLine(`  Vibe events:       ${this.vibeEventsThisSession} this session`)
-    panel.appendLine(`  Supabase syncs:    ${this.supabaseSyncsThisSession} this session`)
+    panel.appendLine(`  Cloud syncs:       ${this.cloudSync?.syncCount ?? 0} this session`)
     panel.appendLine(`  Vibe:              ${Math.round(this.state.colony.vibe.value)} [${this.state.colony.vibe.stateName}]`)
     panel.appendLine(`  Proxies:           ${this.state.colony.proxies.length}`)
     panel.appendLine(`  Buildings:         ${this.state.colony.buildings.length}`)

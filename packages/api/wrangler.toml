@@ -1,0 +1,16 @@
+name = "idle-vibes-api"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "idle-vibes"
+database_id = "placeholder-create-with-wrangler-d1-create"
+
+[env.preview]
+name = "idle-vibes-api-preview"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "idle-vibes-preview"
+database_id = "placeholder-create-with-wrangler-d1-create"

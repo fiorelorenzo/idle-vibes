@@ -4,7 +4,8 @@
   "workspaces": [
     "packages/shared",
     "packages/extension",
-    "packages/ui"
+    "packages/ui",
+    "packages/api"
   ],
   "scripts": {
     "dev": "./scripts/dev.sh",
@@ -34,7 +35,6 @@
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "concurrently": "^9.0.0",
-    "supabase": "^2.0.0",
     "eslint": "^9.0.0",
     "prettier": "^3.3.0",
     "typescript": "^5.5.0",

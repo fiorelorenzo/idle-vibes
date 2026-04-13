@@ -26,5 +26,5 @@ and this project adheres to [Semantic Versioning](https://semver.org).
 - ARIA narrative system with 3 lore entries
 - PixiJS colony renderer (30fps cap)
 - Standby mode with passive generation and scheduled jobs
-- Supabase schema with RLS policies
+- Cloudflare Worker API with D1 schema (saves, market, events, leaderboards)
 - Extension points: Parser plugins, Codex entries, Vibe hooks

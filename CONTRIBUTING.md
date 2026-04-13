@@ -58,8 +58,8 @@ For Codex entries and small bug fixes, go ahead and open a PR directly.
 
 6. **(Optional) Set up cloud sync for local testing:**
 
-   Copy `.env.example` to `.env` and fill in your Supabase credentials.
-   The game runs fully offline without this.
+   Cloud sync uses VS Code's GitHub auth — no manual setup needed.
+   The game runs fully offline without it.
 
 ## Code style
 

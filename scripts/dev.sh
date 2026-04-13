@@ -3,7 +3,7 @@ set -e
 
 # ── idle_vibes development environment ────────────────────────
 #
-#   1. Starts Supabase local
+#   1. Starts Cloudflare Worker local dev (wrangler)
 #   2. Builds shared types, UI, and extension
 #   3. Watches for changes (UI + extension auto-rebuild)
 #   4. Opens VS Code Extension Development Host with project folder
@@ -38,6 +38,7 @@ fi
 
 # ── Cleanup ───────────────────────────────────────────────────
 WATCHERS_PID=""
+WRANGLER_PID=""
 cleanup() {
   echo ""
   echo "[idle_vibes] Shutting down..."
@@ -45,14 +46,18 @@ cleanup() {
     kill $WATCHERS_PID 2>/dev/null || true
     wait $WATCHERS_PID 2>/dev/null || true
   fi
-  supabase stop 2>/dev/null || true
+  if [[ -n "$WRANGLER_PID" ]]; then
+    kill $WRANGLER_PID 2>/dev/null || true
+    wait $WRANGLER_PID 2>/dev/null || true
+  fi
   echo "[idle_vibes] Done."
 }
 trap cleanup EXIT
 
-# ── 1. Supabase ───────────────────────────────────────────────
-echo "[idle_vibes] Starting Supabase..."
-supabase start
+# ── 1. Cloudflare Worker (local) ─────────────────────────────
+echo "[idle_vibes] Starting local API (wrangler dev)..."
+npm run dev -w packages/api &
+WRANGLER_PID=$!
 
 # ── 2. Initial build ─────────────────────────────────────────
 echo "[idle_vibes] Building shared types..."
@@ -77,7 +82,7 @@ sleep 1
 # --wait blocks until the window is closed, then cleanup runs.
 echo "[idle_vibes] Opening VS Code Extension Development Host..."
 echo ""
-echo "  Supabase Studio:   http://localhost:54323"
+echo "  API (wrangler):    http://localhost:8787"
 echo "  Watchers running:  UI (vite build --watch) + extension (esbuild --watch)"
 echo ""
 echo "  Close the VS Code window or Ctrl+C here to stop everything."
