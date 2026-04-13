@@ -51,12 +51,10 @@ export function activate(context: vscode.ExtensionContext): void {
   gameEngine.setCloudSync(cloudSync)
   context.subscriptions.push(cloudSync)
 
-  // Auto-restore cloud session if sync was previously enabled
-  if (gameEngine.getState().settings.cloudSyncEnabled) {
-    cloudSync.enable().catch(() => {
-      // If restore fails, keep going offline
-    })
-  }
+  // Auto sign-in: try silent restore first, prompt if no session exists
+  cloudSync.enable().catch(() => {
+    // If user declines or network fails, keep going offline
+  })
 
   // ── Webview ────────────────────────────────────────────────
   const provider = new ColonyViewProvider(context.extensionUri, bridge)

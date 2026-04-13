@@ -3,6 +3,7 @@
   import { bridge } from './lib/bridge/webview-bridge'
   import { initGameStore, colony } from './lib/stores/game-state'
   import { codexOpen } from './lib/stores/codex'
+  import { cloudSync, initCloudSyncStore } from './lib/stores/cloud-sync'
   import VibeMeter from './lib/components/VibeMeter.svelte'
   import ResourceBar from './lib/components/ResourceBar.svelte'
   import ColonyCanvas from './lib/components/ColonyCanvas.svelte'
@@ -12,9 +13,14 @@
   import RecruitPanel from './lib/components/RecruitPanel.svelte'
   import Codex from './lib/components/Codex.svelte'
 
+  function handleCloudSync() {
+    bridge.send({ type: 'ui:enable-cloud-sync' })
+  }
+
   onMount(() => {
     bridge.init()
     initGameStore()
+    initCloudSyncStore()
   })
 </script>
 
@@ -32,6 +38,11 @@
 
   <div class="toolbar">
     <button class="toolbar-btn" on:click={() => codexOpen.set(true)}>[CODEX]</button>
+    {#if $cloudSync.authenticated}
+      <span class="cloud-status" title="Signed in as {$cloudSync.username}">[SYNC: {$cloudSync.username}]</span>
+    {:else}
+      <button class="toolbar-btn cloud-btn" on:click={handleCloudSync}>[CLOUD SYNC]</button>
+    {/if}
     {#if $colony.standbyActive}
       <span class="standby-indicator">[STANDBY]</span>
     {/if}
@@ -85,6 +96,19 @@
 
   .toolbar-btn:hover {
     border-color: #00aaff;
+  }
+
+  .cloud-status {
+    color: #00cc66;
+    font-size: 10px;
+  }
+
+  .cloud-btn {
+    color: #aa88ff;
+  }
+
+  .cloud-btn:hover {
+    border-color: #aa88ff;
   }
 
   .standby-indicator {

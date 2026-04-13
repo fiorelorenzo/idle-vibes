@@ -78,6 +78,7 @@ export class GameEngine {
     this.bridge.onMessage((msg) => {
       if (msg.type === 'ui:ready' || msg.type === 'ui:request-state') {
         this.bridge.send({ type: 'ext:state-sync', state: this.state })
+        this.sendAuthStatus()
       }
     })
 
@@ -621,18 +622,11 @@ export class GameEngine {
     this.cloudSync = sync
 
     sync.onDidSync(() => {
-      if (this.state.settings.cloudSyncEnabled) {
-        sync.save(this.state)
-      }
+      sync.save(this.state)
     })
 
-    sync.auth.onDidChangeAuth((identity) => {
-      this.bridge.send({
-        type: 'ext:auth-status',
-        authenticated: identity !== null,
-        username: identity?.username,
-        avatarUrl: identity?.avatarUrl,
-      })
+    sync.auth.onDidChangeAuth(() => {
+      this.sendAuthStatus()
     })
   }
 
@@ -642,7 +636,19 @@ export class GameEngine {
     if (ok) {
       this.state.settings.cloudSyncEnabled = true
       this.syncState()
+      this.sendAuthStatus()
     }
+  }
+
+  private sendAuthStatus(): void {
+    if (!this.cloudSync) return
+    const identity = this.cloudSync.auth.getIdentity()
+    this.bridge.send({
+      type: 'ext:auth-status',
+      authenticated: identity !== null,
+      username: identity?.username,
+      avatarUrl: identity?.avatarUrl,
+    })
   }
 
   getState(): GameState {
