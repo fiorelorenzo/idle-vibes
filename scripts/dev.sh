@@ -84,8 +84,8 @@ echo "  Close the VS Code window or Ctrl+C here to stop everything."
 echo ""
 
 "$CODE_CLI" --new-window --wait \
-  --extensionDevelopmentPath="$ROOT_DIR/packages/extension" \
-  --folder-uri="file://$ROOT_DIR"
+  "$ROOT_DIR" \
+  --extensionDevelopmentPath="$ROOT_DIR/packages/extension"
 
 # When the Extension Development Host window closes, we reach here
 # and the EXIT trap handles cleanup.

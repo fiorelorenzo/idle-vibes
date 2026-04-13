@@ -12,6 +12,9 @@ import { DevSimulator } from './parser/dev-simulator'
 export function activate(context: vscode.ExtensionContext): void {
   const devMode = context.extensionMode === vscode.ExtensionMode.Development
 
+  // Set context key so dev-only commands show in the command palette
+  vscode.commands.executeCommand('setContext', 'idle_vibes:devMode', devMode)
+
   if (devMode) {
     console.log('[idle_vibes] Running in development mode')
   }

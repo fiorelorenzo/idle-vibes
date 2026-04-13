@@ -29,49 +29,49 @@
         "command": "idleVibes.reloadWebview",
         "title": "Reload Webview",
         "category": "idle_vibes [DEV]",
-        "enablement": "isExtensionDevelopmentHost"
+        "enablement": "idle_vibes:devMode"
       },
       {
         "command": "idleVibes.sim.aiBurst",
         "title": "Simulate AI Burst",
         "category": "idle_vibes [DEV]",
-        "enablement": "isExtensionDevelopmentHost"
+        "enablement": "idle_vibes:devMode"
       },
       {
         "command": "idleVibes.sim.bugIntroduced",
         "title": "Simulate Bug Introduced",
         "category": "idle_vibes [DEV]",
-        "enablement": "isExtensionDevelopmentHost"
+        "enablement": "idle_vibes:devMode"
       },
       {
         "command": "idleVibes.sim.bugFixed",
         "title": "Simulate Bug Fixed",
         "category": "idle_vibes [DEV]",
-        "enablement": "isExtensionDevelopmentHost"
+        "enablement": "idle_vibes:devMode"
       },
       {
         "command": "idleVibes.sim.commitFeat",
         "title": "Simulate Commit (feat)",
         "category": "idle_vibes [DEV]",
-        "enablement": "isExtensionDevelopmentHost"
+        "enablement": "idle_vibes:devMode"
       },
       {
         "command": "idleVibes.sim.commitFix",
         "title": "Simulate Commit (fix)",
         "category": "idle_vibes [DEV]",
-        "enablement": "isExtensionDevelopmentHost"
+        "enablement": "idle_vibes:devMode"
       },
       {
         "command": "idleVibes.sim.flowSession",
         "title": "Simulate Flow Session",
         "category": "idle_vibes [DEV]",
-        "enablement": "isExtensionDevelopmentHost"
+        "enablement": "idle_vibes:devMode"
       },
       {
         "command": "idleVibes.sim.stopFlow",
         "title": "Stop Flow Simulation",
         "category": "idle_vibes [DEV]",
-        "enablement": "isExtensionDevelopmentHost"
+        "enablement": "idle_vibes:devMode"
       }
     ],
     "configuration": {
