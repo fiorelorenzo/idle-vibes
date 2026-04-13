@@ -629,15 +629,8 @@ export class GameEngine {
     panel.show()
   }
 
-  private syncPending = false
   private syncState(): void {
-    // Throttle: batch multiple state changes into one message per tick
-    if (this.syncPending) return
-    this.syncPending = true
-    queueMicrotask(() => {
-      this.syncPending = false
-      this.bridge.send({ type: 'ext:state-sync', state: this.state })
-    })
+    this.bridge.send({ type: 'ext:state-sync', state: this.state })
   }
 
   private save(): void {
