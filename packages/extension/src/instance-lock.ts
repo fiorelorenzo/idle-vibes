@@ -27,8 +27,8 @@ import * as os from 'os'
 const IDLE_VIBES_DIR = path.join(os.homedir(), '.idle-vibes')
 const INSTANCES_DIR = path.join(IDLE_VIBES_DIR, 'instances')
 const LEADER_FILE = path.join(IDLE_VIBES_DIR, 'leader')
-const HEARTBEAT_INTERVAL_MS = 5_000
-const HEARTBEAT_STALE_MS = 15_000
+const HEARTBEAT_INTERVAL_MS = 30_000
+const HEARTBEAT_STALE_MS = 90_000
 
 export interface InstanceInfo {
   id: string
