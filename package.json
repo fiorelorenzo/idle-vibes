@@ -7,7 +7,7 @@
     "packages/ui"
   ],
   "scripts": {
-    "dev": "supabase start && npm run build:shared && (trap 'supabase stop' EXIT; concurrently -k -n ext,ui -c blue,green \"npm run dev:extension\" \"npm run dev:ui\")",
+    "dev": "./scripts/dev.sh",
     "dev:extension": "npm run dev -w packages/extension",
     "dev:ui": "npm run dev -w packages/ui",
 
