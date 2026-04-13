@@ -1,4 +1,5 @@
 import * as vscode from 'vscode'
+import * as path from 'path'
 import { ColonyViewProvider } from './webview-provider'
 import { ExtensionBridge } from './bridge/host'
 import { LocalStateStorage } from './storage/local-state'
@@ -11,10 +12,11 @@ import { DevSimulator } from './parser/dev-simulator'
 export function activate(context: vscode.ExtensionContext): void {
   const devMode = context.extensionMode === vscode.ExtensionMode.Development
 
+  if (devMode) {
+    console.log('[idle_vibes] Running in development mode')
+  }
+
   // ── Instance coordination ──────────────────────────────────
-  // Multiple VS Code windows may each run idle_vibes. Only the leader
-  // instance owns the colony state. Non-leaders still parse but their
-  // signals are discarded (they see the colony in read-only mode).
   const lock = new InstanceLock()
   context.subscriptions.push(lock.start())
 
@@ -32,7 +34,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const gameEngine = new GameEngine(bridge, storage, parser, vibeEngine)
 
   // ── Webview ────────────────────────────────────────────────
-  const provider = new ColonyViewProvider(context.extensionUri, bridge, devMode)
+  const provider = new ColonyViewProvider(context.extensionUri, bridge)
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(ColonyViewProvider.viewType, provider),
   )
@@ -45,6 +47,10 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('idleVibes.showPerformanceStats', () => {
       gameEngine.showPerformanceStats()
     }),
+    vscode.commands.registerCommand('idleVibes.reloadWebview', () => {
+      provider.reload()
+      vscode.window.showInformationMessage('[idle_vibes] Webview reloaded')
+    }),
   )
 
   // ── Parser + game engine ───────────────────────────────────
@@ -53,8 +59,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     parser.onSignal((signal) => {
-      // Only the leader processes game logic.
-      // All instances forward signals to the webview for visual feedback.
       if (lock.isLeader) {
         gameEngine.handleParserSignal(signal)
       }
@@ -70,9 +74,21 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   )
 
-  // ── Dev simulator (only in Extension Development Host) ─────
+  // ── Dev mode: auto-reload webview on UI rebuild ────────────
   if (devMode) {
-    console.log('[idle_vibes] Dev mode — simulator commands available in command palette')
+    const mediaPath = path.join(context.extensionUri.fsPath, 'media', 'assets')
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(mediaPath, '*.{js,css}'),
+    )
+    watcher.onDidChange(() => {
+      console.log('[idle_vibes] UI assets changed, reloading webview...')
+      provider.reload()
+    })
+    watcher.onDidCreate(() => provider.reload())
+    context.subscriptions.push(watcher)
+
+    // Dev simulator
+    console.log('[idle_vibes] Simulator commands available in command palette')
     const simulator = new DevSimulator((signal) => {
       parser.inject(signal)
     })

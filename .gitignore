@@ -5,6 +5,7 @@ node_modules/
 dist/
 out/
 *.vsix
+packages/extension/media/
 
 # VS Code Extension secrets
 *.vsix.key

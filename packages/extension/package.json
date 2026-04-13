@@ -26,6 +26,12 @@
         "category": "idle_vibes"
       },
       {
+        "command": "idleVibes.reloadWebview",
+        "title": "Reload Webview",
+        "category": "idle_vibes [DEV]",
+        "enablement": "isExtensionDevelopmentHost"
+      },
+      {
         "command": "idleVibes.sim.aiBurst",
         "title": "Simulate AI Burst",
         "category": "idle_vibes [DEV]",

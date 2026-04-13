@@ -3,34 +3,31 @@ set -e
 
 # ── idle_vibes development environment ────────────────────────
 #
-# Starts everything needed for local development:
-#   1. Supabase local (Postgres, Auth, Studio)
-#   2. Vite dev server (HMR for the webview UI)
-#   3. esbuild watch (rebuilds extension on change)
-#   4. VS Code Extension Development Host (extension loaded, project as workspace)
+#   1. Starts Supabase local (Postgres, Auth, Studio)
+#   2. Builds shared types, UI, and extension
+#   3. Watches for changes (UI + extension auto-rebuild)
+#   4. Opens VS Code Extension Development Host
+#
+# UI edits → vite rebuild → auto-copy to media/ → webview auto-reloads
+# Extension edits → esbuild rebuild → use 'Developer: Reload Window'
 #
 # Ctrl+C tears down everything including Supabase containers.
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# Resolve the `code` CLI — it may not be in PATH
+# ── Resolve VS Code CLI ──────────────────────────────────────
 resolve_code_cli() {
   if command -v code &>/dev/null; then
-    echo "code"
-    return
+    echo "code"; return
   fi
-  # macOS: VS Code installed in /Applications
   local vscode_bin="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
   if [[ -x "$vscode_bin" ]]; then
-    echo "$vscode_bin"
-    return
+    echo "$vscode_bin"; return
   fi
-  # macOS: Cursor
   local cursor_bin="/Applications/Cursor.app/Contents/Resources/app/bin/code"
   if [[ -x "$cursor_bin" ]]; then
-    echo "$cursor_bin"
-    return
+    echo "$cursor_bin"; return
   fi
   echo ""
 }
@@ -42,6 +39,7 @@ if [[ -z "$CODE_CLI" ]]; then
   exit 1
 fi
 
+# ── Cleanup ───────────────────────────────────────────────────
 cleanup() {
   echo ""
   echo "[idle_vibes] Shutting down..."
@@ -56,34 +54,41 @@ trap cleanup EXIT
 echo "[idle_vibes] Starting Supabase..."
 supabase start
 
-# ── 2. Build (first run) ─────────────────────────────────────
+# ── 2. Initial build ─────────────────────────────────────────
 echo "[idle_vibes] Building shared types..."
 npm run build:shared
+
+echo "[idle_vibes] Building UI (+ copy to extension/media/)..."
+npm run build:ui
 
 echo "[idle_vibes] Building extension..."
 npm run build:extension
 
-# ── 3. Watchers (Vite + esbuild) ─────────────────────────────
-echo "[idle_vibes] Starting Vite dev server + esbuild watch..."
-npx concurrently -k -n vite,esbuild -c green,blue \
+# ── 3. Watchers ───────────────────────────────────────────────
+echo "[idle_vibes] Starting watchers..."
+npx concurrently -k -n ui,ext -c green,blue \
   "npm run dev:ui" \
   "npm run dev:extension" &
 WATCHERS_PID=$!
 
-# Give Vite a moment to start before opening VS Code
-sleep 2
+sleep 1
 
 # ── 4. Launch Extension Development Host ─────────────────────
 echo "[idle_vibes] Opening VS Code Extension Development Host..."
 "$CODE_CLI" --extensionDevelopmentPath="$ROOT_DIR/packages/extension" "$ROOT_DIR"
 
-echo ""
-echo "  ✓ Vite dev server:   http://localhost:5175"
-echo "  ✓ Supabase Studio:   http://localhost:54323"
-echo "  ✓ Extension loaded in VS Code"
-echo ""
-echo "  Ctrl+C to stop everything."
-echo ""
+cat <<'BANNER'
 
-# Wait for watchers — Ctrl+C triggers cleanup via the trap
+  ✓ Supabase Studio:   http://localhost:54323
+  ✓ UI watch:          vite build --watch → auto-copy to media/
+  ✓ Extension watch:   esbuild --watch
+
+  Edit Svelte/TS in ui/  → auto-rebuild + auto-reload webview
+  Edit extension TS      → auto-rebuild + 'Developer: Reload Window'
+  Simulate AI activity   → Cmd+Shift+P → 'idle_vibes [DEV]: Simulate'
+
+  Ctrl+C to stop everything.
+
+BANNER
+
 wait $WATCHERS_PID
