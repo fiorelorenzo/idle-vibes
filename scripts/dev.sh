@@ -3,15 +3,12 @@ set -e
 
 # ── idle_vibes development environment ────────────────────────
 #
-#   1. Starts Supabase local (Postgres, Auth, Studio)
+#   1. Starts Supabase local
 #   2. Builds shared types, UI, and extension
 #   3. Watches for changes (UI + extension auto-rebuild)
-#   4. Opens VS Code Extension Development Host
+#   4. Opens VS Code Extension Development Host with project folder
 #
-# UI edits → vite rebuild → auto-copy to media/ → webview auto-reloads
-# Extension edits → esbuild rebuild → use 'Developer: Reload Window'
-#
-# Ctrl+C tears down everything including Supabase containers.
+# Close the Extension Development Host window or Ctrl+C to stop everything.
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
@@ -40,11 +37,14 @@ if [[ -z "$CODE_CLI" ]]; then
 fi
 
 # ── Cleanup ───────────────────────────────────────────────────
+WATCHERS_PID=""
 cleanup() {
   echo ""
   echo "[idle_vibes] Shutting down..."
-  kill $WATCHERS_PID 2>/dev/null || true
-  wait $WATCHERS_PID 2>/dev/null || true
+  if [[ -n "$WATCHERS_PID" ]]; then
+    kill $WATCHERS_PID 2>/dev/null || true
+    wait $WATCHERS_PID 2>/dev/null || true
+  fi
   supabase stop 2>/dev/null || true
   echo "[idle_vibes] Done."
 }
@@ -58,7 +58,7 @@ supabase start
 echo "[idle_vibes] Building shared types..."
 npm run build:shared
 
-echo "[idle_vibes] Building UI (+ copy to extension/media/)..."
+echo "[idle_vibes] Building UI..."
 npm run build:ui
 
 echo "[idle_vibes] Building extension..."
@@ -74,21 +74,18 @@ WATCHERS_PID=$!
 sleep 1
 
 # ── 4. Launch Extension Development Host ─────────────────────
+# --wait blocks until the window is closed, then cleanup runs.
 echo "[idle_vibes] Opening VS Code Extension Development Host..."
-"$CODE_CLI" --new-window --extensionDevelopmentPath="$ROOT_DIR/packages/extension" "$ROOT_DIR"
+echo ""
+echo "  Supabase Studio:   http://localhost:54323"
+echo "  Watchers running:  UI (vite build --watch) + extension (esbuild --watch)"
+echo ""
+echo "  Close the VS Code window or Ctrl+C here to stop everything."
+echo ""
 
-cat <<'BANNER'
+"$CODE_CLI" --new-window --wait \
+  --extensionDevelopmentPath="$ROOT_DIR/packages/extension" \
+  "$ROOT_DIR"
 
-  ✓ Supabase Studio:   http://localhost:54323
-  ✓ UI watch:          vite build --watch → auto-copy to media/
-  ✓ Extension watch:   esbuild --watch
-
-  Edit Svelte/TS in ui/  → auto-rebuild + auto-reload webview
-  Edit extension TS      → auto-rebuild + 'Developer: Reload Window'
-  Simulate AI activity   → Cmd+Shift+P → 'idle_vibes [DEV]: Simulate'
-
-  Ctrl+C to stop everything.
-
-BANNER
-
-wait $WATCHERS_PID
+# When the Extension Development Host window closes, we reach here
+# and the EXIT trap handles cleanup.
