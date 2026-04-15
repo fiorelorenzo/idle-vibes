@@ -1,6 +1,7 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import { ColonyViewProvider } from './webview-provider'
+// path import is retained for the dev-mode webview watcher below.
 import { ExtensionBridge } from './bridge/host'
 import { LocalStateStorage } from './storage/local-state'
 import { SmartParser } from './parser/index'
@@ -16,11 +17,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
   if (devMode) {
     console.log('[idle_vibes] Running in development mode')
-    if (!vscode.workspace.workspaceFolders?.length) {
-      const projectRoot = vscode.Uri.file(path.resolve(context.extensionUri.fsPath, '..', '..'))
-      console.log(`[idle_vibes] No workspace folder open, adding: ${projectRoot.fsPath}`)
-      vscode.workspace.updateWorkspaceFolders(0, 0, { uri: projectRoot })
-    }
   }
 
   // ── Instance coordination ──────────────────────────────────
@@ -44,6 +40,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const apiUrl = process.env.VITE_API_URL ?? 'http://127.0.0.1:8787'
   const cloudSync = new CloudSyncService(apiUrl)
   context.subscriptions.push(cloudSync)
+  coordinator.setCloudSync(cloudSync)
 
   cloudSync.enable().catch(() => {
     // If user declines or network fails, keep going offline

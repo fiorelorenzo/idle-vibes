@@ -12,7 +12,7 @@
   }
 </script>
 
-{#if $worldSnapshot && $worldSnapshot.run.deepestLayer !== 'surface'}
+{#if $worldSnapshot && ($worldSnapshot.run.deepestLayer !== 'surface' || $worldSnapshot.run.layersCleared > 0 || $worldSnapshot.resources.shards >= 20)}
   <button class="prestige" on:click={confirmPrestige}>COMMIT TO MAIN</button>
 {/if}
 

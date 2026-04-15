@@ -19,9 +19,10 @@ import { PassiveHeartbeat } from './sim/passive-heartbeat'
 import { DramaClock } from './sim/drama-clock'
 import { WaveClock } from './sim/wave-clock'
 import { ExpeditionManager } from './sim/expedition-manager'
+import type { CloudSyncService } from './cloud/sync-service'
 import { performPrestige, computeEchoes } from './sim/prestige'
 import { rollModifierChoices, resolveModifier } from './sim/modifier-engine'
-import { ECHO_NODE_DEFS } from '@idle-vibes/shared'
+import { ECHO_NODE_DEFS, LAYER_INDEX } from '@idle-vibes/shared'
 
 /**
  * GameCoordinator — host-side authoritative controller.
@@ -44,6 +45,8 @@ export class GameCoordinator {
   private snapshotDirty = false
   private lastSnapshotSendAt = 0
   private syncFlushTimer: ReturnType<typeof setInterval> | null = null
+  private cloudSync: CloudSyncService | null = null
+  private cloudDisposables: { dispose(): void }[] = []
 
   constructor(
     private readonly bridge: ExtensionBridge,
@@ -75,6 +78,8 @@ export class GameCoordinator {
     this.drama.stop()
     this.waves.stop()
     this.expeditions.stop()
+    this.cloudDisposables.forEach((d) => d.dispose())
+    this.cloudDisposables = []
     this.persist()
   }
 
@@ -182,6 +187,11 @@ export class GameCoordinator {
           this.snapshot.resources.shards -= mutation.cost
           layer.unlocked = true
           this.snapshot.run.layersCleared++
+          const idx = LAYER_INDEX[mutation.layer] ?? 0
+          const currentIdx = LAYER_INDEX[this.snapshot.run.deepestLayer] ?? 0
+          if (idx > currentIdx) {
+            this.snapshot.run.deepestLayer = mutation.layer
+          }
         }
         break
       }
@@ -247,6 +257,37 @@ export class GameCoordinator {
 
   getSnapshot(): WorldSnapshot {
     return this.snapshot
+  }
+
+  /**
+   * Attach a cloud sync service. On the sync tick the coordinator pushes
+   * the current snapshot; on attach it attempts a one-shot load and, if
+   * the cloud save is newer than the local one, replaces the local state.
+   */
+  setCloudSync(cloud: CloudSyncService): void {
+    this.cloudSync = cloud
+    this.cloudDisposables.forEach((d) => d.dispose())
+    this.cloudDisposables = []
+    this.cloudDisposables.push(cloud.onDidSync(() => {
+      // Only upload if there's an actual auth session (save is a no-op otherwise).
+      void cloud.save(this.snapshot)
+    }))
+    void this.loadFromCloud(cloud)
+  }
+
+  private async loadFromCloud(cloud: CloudSyncService): Promise<void> {
+    const remote = await cloud.load()
+    if (!remote) return
+    // If the cloud save is newer than our local snapshot, replace.
+    if (remote.snapshot.savedAt > this.snapshot.savedAt) {
+      this.snapshot = remote.snapshot
+      // Re-attach expedition timers for the restored snapshot.
+      this.expeditions.stop()
+      this.expeditions = new ExpeditionManager()
+      this.expeditions.attach(this.snapshot, (event) => this.emitEvent(event))
+      this.sendSnapshot()
+      this.persist()
+    }
   }
 }
 

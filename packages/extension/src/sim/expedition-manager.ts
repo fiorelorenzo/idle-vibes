@@ -1,5 +1,5 @@
 import type { GameEvent, LayerId, ExpeditionState, WorldSnapshot, Loot } from '@idle-vibes/shared'
-import { EXPEDITION_MIN_FAIL_RATE, EXPEDITION_MAX_FAIL_RATE, LAYER_INDEX } from '@idle-vibes/shared'
+import { EXPEDITION_MIN_FAIL_RATE, EXPEDITION_MAX_FAIL_RATE, LAYER_INDEX, LAYER_DEFS } from '@idle-vibes/shared'
 
 /**
  * Host-side expedition lifecycle.
@@ -47,7 +47,15 @@ export class ExpeditionManager {
   }
 
   private scheduleReturn(exp: ExpeditionState): void {
-    const remaining = Math.max(1000, exp.durationMs - (Date.now() - exp.startedAt))
+    const remaining = exp.durationMs - (Date.now() - exp.startedAt)
+    if (remaining <= 0) {
+      // The app was closed while this expedition was in flight and its
+      // duration has already elapsed. Resolve on the next tick so the
+      // webview has a chance to receive the initial snapshot first.
+      const timer = setTimeout(() => this.resolve(exp.id), 0)
+      this.timers.set(exp.id, timer)
+      return
+    }
     const timer = setTimeout(() => this.resolve(exp.id), remaining)
     this.timers.set(exp.id, timer)
   }
@@ -69,12 +77,25 @@ export class ExpeditionManager {
       ? rollLoot(exp.targetLayer)
       : { shards: 0, tokens: 0, focus: 0, relicId: null }
 
-    // Credit loot to snapshot
+    // Credit loot to snapshot and record how deep the player has been.
     if (success) {
       this.snapshot.resources.shards += loot.shards
       this.snapshot.resources.tokens += loot.tokens
       this.snapshot.resources.focus += loot.focus
+      const reachedIdx = LAYER_INDEX[exp.targetLayer] ?? 0
+      const currentIdx = LAYER_INDEX[this.snapshot.run.deepestLayer] ?? 0
+      if (reachedIdx > currentIdx) {
+        this.snapshot.run.deepestLayer = exp.targetLayer
+        if (!this.snapshot.run.layersCleared || reachedIdx > this.snapshot.run.layersCleared) {
+          this.snapshot.run.layersCleared = reachedIdx
+        }
+      }
+      // Mark the Loot.relicId as owned so the player sees it in the tray.
+      if (loot.relicId && !this.snapshot.meta.ownedRelics.includes(loot.relicId)) {
+        this.snapshot.meta.ownedRelics.push(loot.relicId)
+      }
     }
+    void LAYER_DEFS
 
     this.emit({ kind: 'expedition_return', expeditionId: exp.id, success, loot })
 
