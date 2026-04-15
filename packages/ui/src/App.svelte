@@ -111,6 +111,8 @@
     height: 100vh;
     background: var(--vscode-editor-background, #1e1e1e);
     color: var(--vscode-editor-foreground, #d4d4d4);
+    overflow: hidden;
+    min-height: 0;
   }
 
   .hud {
@@ -150,7 +152,11 @@
   }
 
   .feed {
-    flex: 0 0 140px;
+    flex: 0 0 120px;
+    min-height: 120px;
+    max-height: 120px;
+    height: 120px;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
   }

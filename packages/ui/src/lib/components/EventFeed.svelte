@@ -20,7 +20,9 @@
 
 <style>
   .event-feed {
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
     overflow-y: auto;
     padding: 6px 8px;
     font-size: var(--desc-font-sm, 12px);
