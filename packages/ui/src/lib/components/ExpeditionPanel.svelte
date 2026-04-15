@@ -46,9 +46,15 @@
 
 <section class="expedition-panel">
   <div class="header">
-    <span class="label">EXPEDITIONS</span>
+    <span
+      class="label"
+      title="Send a Delver down the Stack. Returns with tokens, shards, focus, and sometimes a relic. Mid-expedition choice cards appear here."
+    >EXPEDITIONS</span>
     <div class="controls">
-      <select bind:value={selectedLayer}>
+      <select
+        bind:value={selectedLayer}
+        title="Target layer — deeper layers take longer but give richer loot."
+      >
         {#each LAYER_DEFS as def}
           {@const state = $worldSnapshot?.layers.find((l) => l.id === def.id)}
           <option value={def.id} disabled={!state?.unlocked}>
@@ -56,7 +62,10 @@
           </option>
         {/each}
       </select>
-      <button on:click={launch}>launch</button>
+      <button
+        on:click={launch}
+        title="Launch a new Delver expedition to the selected layer."
+      >launch</button>
     </div>
   </div>
 
@@ -94,25 +103,25 @@
     flex: 0 0 auto;
     border-top: 1px solid var(--vscode-panel-border, #333);
     background: var(--vscode-editor-background, #1e1e1e);
-    padding: 4px 6px;
-    min-height: 52px;
+    padding: 6px 10px;
+    min-height: 60px;
   }
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 9px;
+    font-size: var(--desc-font-xs, 11px);
     color: var(--vscode-descriptionForeground, #888);
   }
-  .label { letter-spacing: 1px; }
-  .controls { display: flex; gap: 4px; }
+  .label { letter-spacing: 1px; font-weight: bold; }
+  .controls { display: flex; gap: var(--desc-gap-sm, 4px); }
   select, button {
     background: transparent;
     border: 1px solid var(--vscode-panel-border, #333);
     color: var(--vscode-editor-foreground, #d4d4d4);
     font-family: inherit;
-    font-size: 9px;
-    padding: 1px 4px;
+    font-size: var(--desc-font-sm, 12px);
+    padding: 3px 6px;
   }
   button {
     cursor: pointer;
@@ -120,32 +129,34 @@
   }
   button:hover { border-color: var(--vscode-charts-purple, #b180d7); }
 
-  .list { margin-top: 4px; display: flex; flex-direction: column; gap: 2px; }
-  .exp-row { display: flex; gap: 6px; font-size: 9px; }
-  .exp-layer { color: var(--vscode-charts-blue, #4daafc); text-transform: uppercase; flex: 0 0 60px; }
-  .exp-id { color: var(--vscode-descriptionForeground, #888); flex: 0 0 40px; }
+  .list { margin-top: var(--desc-gap-sm, 4px); display: flex; flex-direction: column; gap: 3px; }
+  .exp-row { display: flex; gap: 8px; font-size: var(--desc-font-sm, 12px); align-items: center; }
+  .exp-layer { color: var(--vscode-charts-blue, #4daafc); text-transform: uppercase; flex: 0 0 70px; }
+  .exp-id { color: var(--vscode-descriptionForeground, #888); flex: 0 0 50px; }
   .exp-remaining { color: var(--vscode-charts-orange, #ff8c00); }
-  .exp-empty { font-size: 9px; font-style: italic; color: var(--vscode-descriptionForeground, #666); }
+  .exp-empty { font-size: var(--desc-font-sm, 12px); font-style: italic; color: var(--vscode-descriptionForeground, #666); }
 
   .choice {
-    margin: 2px 0 4px 10px;
-    padding: 3px 6px;
+    margin: 3px 0 4px 14px;
+    padding: 5px 8px;
     border: 1px solid var(--vscode-focusBorder, #007fd4);
     background: rgba(0, 127, 212, 0.05);
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
   }
   .choice-title {
-    font-size: 8px;
+    font-size: var(--desc-font-xs, 11px);
     letter-spacing: 1px;
     color: var(--vscode-charts-blue, #4daafc);
     text-transform: uppercase;
+    font-weight: bold;
   }
-  .choice-buttons { display: flex; gap: 4px; }
+  .choice-buttons { display: flex; gap: 6px; }
   .choice-buttons button {
     flex: 1;
-    font-size: 9px;
+    font-size: var(--desc-font-sm, 12px);
+    padding: 4px 6px;
     color: var(--vscode-editor-foreground, #d4d4d4);
   }
   .choice-buttons .a { color: var(--vscode-charts-orange, #ff8c00); }

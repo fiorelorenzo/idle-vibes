@@ -9,8 +9,12 @@ import type { LayerId } from './world.js'
 export type GlitchKind = 'bug_sprite' | 'null_wraith' | 'runner' | 'bomber' | 'leech' | 'tank'
 export type GameEventKind = GameEvent['kind']
 
+export type KinKind = 'scribe' | 'warden' | 'delver' | 'archivist'
+
 export type GameEvent =
   | { kind: 'mote_rain'; count: number; source: 'ai' | 'passive' | 'bloom'; layer?: LayerId }
+  | { kind: 'kin_spawn'; kinKind: KinKind; gx: number; gy: number; layer: LayerId }
+  | { kind: 'building_placed'; buildingKind: 'loom' | 'barracks' | 'well' | 'gate'; gx: number; gy: number; layer: LayerId }
   | { kind: 'focus_surge'; amount: number }
   | { kind: 'glitch_spawn'; glitchType: GlitchKind; count: number; reason: 'pillarB' | 'wave' | 'boss'; layer: LayerId }
   | { kind: 'platform_grow'; layer: LayerId }

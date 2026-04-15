@@ -112,7 +112,16 @@ export function computeRunEffects(snapshot: WorldSnapshot): RunEffects {
   applyEchoTree(snapshot, effects)
   applyRelics(snapshot, effects)
   applyModifier(snapshot, effects)
+  applyBuildings(snapshot, effects)
   return effects
+}
+
+function applyBuildings(snapshot: WorldSnapshot, out: RunEffects): void {
+  const gateCount = snapshot.buildings.filter((b) => b.kind === 'gate').length
+  if (gateCount > 0) {
+    // Each Delver Gate: -20% expedition duration, multiplicative.
+    out.expeditionDurationMul *= Math.pow(0.8, gateCount)
+  }
 }
 
 function applyEchoTree(snapshot: WorldSnapshot, out: RunEffects): void {

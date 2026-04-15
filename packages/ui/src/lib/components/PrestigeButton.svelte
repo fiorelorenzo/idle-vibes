@@ -13,20 +13,25 @@
 </script>
 
 {#if $worldSnapshot && ($worldSnapshot.run.deepestLayer !== 'surface' || $worldSnapshot.run.layersCleared > 0 || $worldSnapshot.resources.shards >= 20)}
-  <button class="prestige" on:click={confirmPrestige}>COMMIT TO MAIN</button>
+  <button
+    class="prestige"
+    on:click={confirmPrestige}
+    title="End this run and earn Commit Echoes. Resets colony, unlocks, and Relics equipped; keeps Echo Tree and owned relics. Payout scales with layers cleared and bosses killed."
+  >COMMIT TO MAIN</button>
 {/if}
 
 <style>
   .prestige {
-    margin: 2px 6px;
-    padding: 4px;
+    margin: 4px 10px;
+    padding: 7px;
     background: transparent;
     border: 1px solid var(--vscode-charts-purple, #b180d7);
     color: var(--vscode-charts-purple, #b180d7);
     font-family: inherit;
-    font-size: 9px;
+    font-size: var(--desc-font-sm, 12px);
     letter-spacing: 2px;
     cursor: pointer;
+    font-weight: bold;
   }
   .prestige:hover {
     background: var(--vscode-charts-purple, #b180d7);

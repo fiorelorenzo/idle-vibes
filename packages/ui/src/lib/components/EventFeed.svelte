@@ -22,21 +22,22 @@
   .event-feed {
     height: 100%;
     overflow-y: auto;
-    padding: 4px 6px;
-    font-size: 9px;
-    line-height: 1.3;
+    padding: 6px 8px;
+    font-size: var(--desc-font-sm, 12px);
+    line-height: 1.4;
     border-top: 1px solid var(--vscode-panel-border, #333);
     background: var(--vscode-editor-background, #1e1e1e);
   }
   .line {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     padding: 1px 0;
     color: var(--vscode-editor-foreground, #d4d4d4);
   }
   .ts {
-    flex: 0 0 48px;
+    flex: 0 0 56px;
     color: var(--vscode-descriptionForeground, #888);
+    font-size: var(--desc-font-xs, 11px);
   }
   .txt { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .feed-info    { color: var(--vscode-charts-blue, #4daafc); }

@@ -21,6 +21,17 @@ export interface LayerState {
   bossDefeated: boolean
 }
 
+export type BuildingKind = 'loom' | 'barracks' | 'well' | 'gate'
+
+export interface BuildingState {
+  id: string
+  kind: BuildingKind
+  layer: LayerId
+  gx: number
+  gy: number
+  placedAt: number
+}
+
 export interface ExpeditionState {
   id: string
   delverId: string
@@ -113,6 +124,7 @@ export interface WorldSnapshot {
   resources: ResourceBag
   layers: LayerState[]
   expeditions: ExpeditionState[]
+  buildings: BuildingState[]
 
   run: RunState
   meta: MetaState
@@ -137,3 +149,4 @@ export type WorldMutation =
   | { kind: 'buy_echo_node'; nodeId: string; cost: number }
   | { kind: 'pick_modifier'; modifierId: string | null }
   | { kind: 'request_boss_spawn'; layer: LayerId }
+  | { kind: 'place_building'; buildingKind: BuildingKind; layer: LayerId; gx: number; gy: number }

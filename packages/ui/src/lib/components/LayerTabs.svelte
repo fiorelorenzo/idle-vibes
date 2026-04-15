@@ -12,7 +12,9 @@
       class:unlocked={state?.unlocked}
       class:locked={!state?.unlocked}
       on:click={() => jumpToLayer(def.id)}
-      title={def.displayName}
+      title={state?.unlocked
+        ? `${def.displayName} — jump camera to this layer. Boss: ${def.bossId.replace(/_/g, ' ')}.`
+        : `${def.displayName} — locked. Unlock cost: ${def.unlockCostShards} shards (◈).`}
     >
       <span class="letter">{def.displayName[0]}</span>
       {#if state && !state.unlocked}
@@ -26,8 +28,8 @@
   .layer-tabs {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 4px;
+    gap: 3px;
+    padding: 6px 5px;
     border-left: 1px solid var(--vscode-panel-border, #333);
     background: var(--vscode-editor-background, #1e1e1e);
   }
@@ -36,14 +38,14 @@
     border: 1px solid var(--vscode-panel-border, #333);
     color: var(--vscode-descriptionForeground, #888);
     font-family: inherit;
-    font-size: 9px;
-    padding: 4px 6px;
+    font-size: var(--desc-font-xs, 11px);
+    padding: 6px 7px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 1px;
-    min-width: 28px;
+    min-width: 32px;
   }
   .tab.unlocked {
     color: var(--vscode-charts-blue, #4daafc);
@@ -55,6 +57,6 @@
   .tab:hover:not(.locked) {
     background: var(--vscode-list-hoverBackground, rgba(255,255,255,0.05));
   }
-  .letter { font-weight: bold; }
-  .cost { font-size: 7px; color: var(--vscode-charts-purple, #b180d7); }
+  .letter { font-weight: bold; font-size: var(--desc-font-md, 13px); }
+  .cost { font-size: 9px; color: var(--vscode-charts-purple, #b180d7); }
 </style>

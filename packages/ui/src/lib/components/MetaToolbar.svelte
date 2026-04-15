@@ -13,13 +13,24 @@
 </script>
 
 <nav class="meta-toolbar">
-  <button on:click={() => (echoOpen = true)}>
+  <button
+    on:click={() => (echoOpen = true)}
+    title="Open the Echo Tree — spend Commit Echoes on permanent upgrades."
+  >
     ECHO TREE · {$worldSnapshot?.meta.echoes ?? 0}
   </button>
-  <button class="sfx-toggle" class:on={sfxOn} on:click={toggleSfx} title="toggle sfx">
+  <button
+    class="sfx-toggle"
+    class:on={sfxOn}
+    on:click={toggleSfx}
+    title={sfxOn ? 'Sound effects on — click to mute' : 'Sound effects off — click to enable'}
+  >
     {sfxOn ? '♪' : '·'}
   </button>
-  <span class="stats">
+  <span
+    class="stats"
+    title="Total prestiges completed across all runs, and number of unique relics ever collected."
+  >
     {$worldSnapshot?.meta.totalPrestiges ?? 0} runs ·
     {$worldSnapshot?.meta.ownedRelics.length ?? 0} relics
   </span>
@@ -32,10 +43,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 3px 8px;
+    gap: 6px;
+    padding: 5px 10px;
     border-top: 1px solid var(--vscode-panel-border, #333);
     background: var(--vscode-editor-background, #1e1e1e);
-    font-size: 9px;
+    font-size: var(--desc-font-xs, 11px);
     color: var(--vscode-descriptionForeground, #888);
     flex: 0 0 auto;
   }
@@ -44,8 +56,8 @@
     border: 1px solid var(--vscode-panel-border, #333);
     color: var(--vscode-charts-purple, #b180d7);
     font-family: inherit;
-    font-size: 9px;
-    padding: 1px 6px;
+    font-size: var(--desc-font-xs, 11px);
+    padding: 3px 8px;
     letter-spacing: 1px;
     cursor: pointer;
   }

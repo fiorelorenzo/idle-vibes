@@ -3,6 +3,10 @@ import type { EcsWorld } from '../world'
 import { spawnMote } from '../prefabs/mote'
 import { spawnGlitch } from '../prefabs/glitch'
 import { spawnBoss } from '../prefabs/boss'
+import { spawnScribe } from '../prefabs/scribe'
+import { spawnWarden } from '../prefabs/warden'
+import { spawnDelver } from '../prefabs/delver'
+import { spawnBuilding } from '../prefabs/building'
 import { rand } from '../util/rng'
 import { sfx } from '../../audio/synth'
 
@@ -134,6 +138,29 @@ function handle(world: EcsWorld, event: GameEvent): void {
         severity: 'info',
         text: `the stack grows · ${event.layer}`,
         eventKind: 'platform_grow',
+      })
+      break
+    case 'kin_spawn': {
+      if (event.kinKind === 'scribe') spawnScribe(world, event.gx, event.gy)
+      else if (event.kinKind === 'warden') spawnWarden(world, event.gx, event.gy)
+      else if (event.kinKind === 'delver') spawnDelver(world, event.gx, event.gy)
+      world.pendingLogs.push({
+        id: `kin-${world.tick}`,
+        ts: Date.now(),
+        severity: 'success',
+        text: `${event.kinKind} joins the colony`,
+        eventKind: 'kin_spawn',
+      })
+      break
+    }
+    case 'building_placed':
+      spawnBuilding(world, event.buildingKind, event.gx, event.gy)
+      world.pendingLogs.push({
+        id: `build-${world.tick}`,
+        ts: Date.now(),
+        severity: 'success',
+        text: `${event.buildingKind} built`,
+        eventKind: 'building_placed',
       })
       break
     case 'boss_spawn': {

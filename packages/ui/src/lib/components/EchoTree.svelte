@@ -71,6 +71,9 @@
               class:disabled={!canBuy(node.id) && !maxed}
               on:click={() => buy(node.id)}
               disabled={maxed || !canBuy(node.id)}
+              title={maxed
+                ? `${node.name} — fully upgraded. ${node.description}`
+                : `${node.name} — ${node.description} Cost: ${costFor(node.id)} echoes. ${rank}/${node.maxRank} ranks purchased.`}
             >
               <span class="name">{node.name}</span>
               <span class="rank">{rank}/{node.maxRank}</span>
@@ -99,53 +102,59 @@
     margin: 20px;
     border: 1px solid var(--vscode-focusBorder, #007fd4);
     background: var(--vscode-editor-background, #1e1e1e);
-    padding: 10px;
+    padding: 14px;
     overflow-y: auto;
-    font-size: 10px;
+    font-size: var(--desc-font-sm, 12px);
   }
   header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     color: var(--vscode-charts-purple, #b180d7);
     letter-spacing: 1px;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+    font-size: var(--desc-font-md, 13px);
+    font-weight: bold;
   }
   .close {
     background: transparent;
     border: none;
     color: var(--vscode-descriptionForeground, #888);
-    font-size: 16px;
+    font-size: 22px;
     cursor: pointer;
+    line-height: 1;
+    padding: 0 6px;
   }
   h3 {
-    font-size: 9px;
-    margin: 8px 0 4px 0;
+    font-size: var(--desc-font-xs, 11px);
+    margin: 14px 0 6px 0;
     color: var(--vscode-charts-blue, #4daafc);
     letter-spacing: 1px;
+    font-weight: bold;
   }
   .branch {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 4px;
+    gap: 6px;
   }
   .node {
     display: grid;
     grid-template-columns: 1fr auto;
     grid-template-rows: auto auto;
-    gap: 2px 6px;
-    padding: 4px 6px;
+    gap: 3px 10px;
+    padding: 8px 10px;
     background: transparent;
     border: 1px solid var(--vscode-panel-border, #333);
     color: var(--vscode-editor-foreground, #d4d4d4);
     font-family: inherit;
-    font-size: 9px;
+    font-size: var(--desc-font-sm, 12px);
     text-align: left;
     cursor: pointer;
   }
-  .node .name { color: var(--vscode-charts-orange, #ff8c00); }
+  .node .name { color: var(--vscode-charts-orange, #ff8c00); font-weight: bold; }
   .node .rank { justify-self: end; color: var(--vscode-descriptionForeground, #888); }
-  .node .desc { grid-column: 1 / -1; color: var(--vscode-descriptionForeground, #888); font-size: 8px; }
-  .node .cost { grid-column: 1 / -1; justify-self: end; color: var(--vscode-charts-purple, #b180d7); }
+  .node .desc { grid-column: 1 / -1; color: var(--vscode-descriptionForeground, #888); font-size: var(--desc-font-xs, 11px); }
+  .node .cost { grid-column: 1 / -1; justify-self: end; color: var(--vscode-charts-purple, #b180d7); font-size: var(--desc-font-xs, 11px); }
   .node:hover:not(.disabled):not(.maxed) {
     border-color: var(--vscode-charts-orange, #ff8c00);
   }

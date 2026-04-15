@@ -89,6 +89,13 @@ export const Kin = defineComponent() // parent tag for all 4 Kin archetypes
 export const GlitchTag = defineComponent()
 export const MoteTag = defineComponent()
 export const BossTag = defineComponent()
+export const CoreTag = defineComponent()
+export const BuildingTag = defineComponent()
+export const BuildingType = defineComponent({ type: Types.ui8 })
+export const BuildingProduction = defineComponent({
+  interval: Types.f32,
+  timer: Types.f32,
+})
 
 // ── enums (plain TS — bitECS stores numeric codes) ──────────────────
 export const KIN = {
@@ -127,4 +134,11 @@ export const PARTICLE_KIND = {
   floating_text: 5,
   smoke: 6,
   ring: 7,
+} as const
+
+export const BUILDING = {
+  loom: 0,         // produces Scribes
+  barracks: 1,     // produces Wardens
+  well: 2,         // passive tokens
+  gate: 3,         // required for expeditions
 } as const

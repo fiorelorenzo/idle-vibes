@@ -9,6 +9,8 @@
   import { spawnScribe } from '../ecs/prefabs/scribe'
   import { spawnWarden } from '../ecs/prefabs/warden'
   import { spawnDelver } from '../ecs/prefabs/delver'
+  import { spawnCore } from '../ecs/prefabs/core'
+  import { spawnBuilding } from '../ecs/prefabs/building'
   import { worldSnapshot } from '../stores/world-store'
   import { cameraTarget } from '../stores/camera-store'
   import { theme } from '../theme/theme-store'
@@ -29,14 +31,28 @@
   function handleResize(): void {
     if (!pixi || !container) return
     const rect = container.getBoundingClientRect()
-    const scale = Math.max(1, Math.floor(rect.width / VIRTUAL_WIDTH))
-    const width = VIRTUAL_WIDTH * scale
-    const height = Math.max(240, Math.floor(rect.height * scale))
-    pixi.resize(width, height)
-    canvas.style.width = `${rect.width}px`
-    canvas.style.height = `${rect.height}px`
+    const cssWidth = Math.max(240, rect.width)
+    const cssHeight = Math.max(240, rect.height)
+
+    // Keep the internal virtual width constant and scale the stage to
+    // match the container. This way any sidebar width yields a smooth
+    // fit without integer-scale jumps. devicePixelRatio gives crispness
+    // on hidpi displays; the internal coordinates remain in the 320-wide
+    // virtual space so gameplay math is unchanged.
+    const dpr = window.devicePixelRatio || 1
+    const renderScale = (cssWidth / VIRTUAL_WIDTH) * dpr
+    const renderWidth = Math.round(cssWidth * dpr)
+    const renderHeight = Math.round(cssHeight * dpr)
+
+    pixi.resize(renderWidth, renderHeight)
+    pixi.stage.scale.set(renderScale)
+
+    canvas.style.width = `${cssWidth}px`
+    canvas.style.height = `${cssHeight}px`
+
     if (camera && map) {
-      const viewportWorld = rect.height / scale
+      // In virtual pixels.
+      const viewportWorld = cssHeight / (cssWidth / VIRTUAL_WIDTH)
       camera.setBounds(Math.max(0, map.totalHeight - viewportWorld))
     }
   }
@@ -48,12 +64,19 @@
     map.refresh(pixi.themeInts)
 
     // Seed a small starting colony on the Surface layer.
-    spawnScribe(runtime.world, 8, 4)
-    spawnScribe(runtime.world, 10, 4)
-    spawnScribe(runtime.world, 12, 4)
-    spawnWarden(runtime.world, 9, 6)
-    spawnWarden(runtime.world, 11, 6)
-    spawnDelver(runtime.world, 10, 5)
+    spawnCore(runtime.world, 10, 3)
+    spawnScribe(runtime.world, 8, 5)
+    spawnScribe(runtime.world, 11, 5)
+    spawnScribe(runtime.world, 13, 5)
+    spawnWarden(runtime.world, 9, 7)
+    spawnWarden(runtime.world, 12, 7)
+    spawnDelver(runtime.world, 10, 6)
+
+    // Re-hydrate any buildings persisted in the snapshot so they show
+    // up after reload.
+    for (const b of snapshot.buildings) {
+      spawnBuilding(runtime.world, b.kind, b.gx, b.gy)
+    }
 
     // Configure camera bounds from the rendered map height.
     camera?.setBounds(Math.max(0, map.totalHeight - 240))

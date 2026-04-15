@@ -20,22 +20,31 @@
 </script>
 
 {#if visible}
-  <button class="descend" class:disabled={!canAfford} on:click={descend} disabled={!canAfford}>
+  <button
+    class="descend"
+    class:disabled={!canAfford}
+    on:click={descend}
+    disabled={!canAfford}
+    title={canAfford
+      ? `Spend ${cost} shards to summon the ${nextLayer.displayName} Watcher boss. Defeating it drops relics and advances run progress.`
+      : `Need ${cost} shards to summon the ${nextLayer.displayName} Watcher.`}
+  >
     DESCEND → {nextLayer.displayName} · {cost}◈
   </button>
 {/if}
 
 <style>
   .descend {
-    margin: 2px 6px;
-    padding: 4px;
+    margin: 4px 10px;
+    padding: 7px;
     background: transparent;
     border: 1px solid var(--vscode-errorForeground, #f48771);
     color: var(--vscode-errorForeground, #f48771);
     font-family: inherit;
-    font-size: 9px;
+    font-size: var(--desc-font-sm, 12px);
     letter-spacing: 2px;
     cursor: pointer;
+    font-weight: bold;
   }
   .descend:hover:not(.disabled) {
     background: var(--vscode-errorForeground, #f48771);

@@ -6,16 +6,19 @@ import {
   KIN,
   GlitchTag,
   BossTag,
+  CoreTag,
   Health,
   Attack,
   Aggro,
   AIState,
   PathTarget,
   GridPos,
+  Home,
   STATE,
   SpriteRef,
   Carrying,
 } from '../components'
+import { refreshCoreHp } from '../prefabs/core'
 import type { EcsWorld } from '../world'
 import { killEntity } from '../world'
 import { spawnFloatingText } from '../prefabs/floating-text'
@@ -24,9 +27,22 @@ import { sfx } from '../../audio/synth'
 const wardenQuery = defineQuery([Kin, KinType, Attack, Aggro, AIState, Position, GridPos, PathTarget])
 const glitchQuery = defineQuery([GlitchTag, Health, Position, GridPos, PathTarget, AIState])
 const carrierQuery = defineQuery([Carrying, Position])
+const coreQuery = defineQuery([CoreTag, Health])
 
-const CORE_GX = 10
-const CORE_GY = 4
+/**
+ * Core world coordinate. The Core entity sits at this tile; glitches
+ * target a ring of tiles around it so they don't pile up.
+ */
+export const CORE_GX = 10
+export const CORE_GY = 3
+
+// Target tiles around the Core — glitches pick one and path to it,
+// so they spread out instead of stacking on a single tile.
+const CORE_APPROACH_TILES = [
+  [9, 4], [10, 4], [11, 4],
+  [8, 5], [9, 5], [10, 5], [11, 5], [12, 5],
+  [8, 6], [12, 6],
+]
 
 /**
  * Combat + glitch locomotion + hit resolution.
@@ -39,6 +55,7 @@ export function combatSystem(world: EcsWorld): void {
   const dt = world.delta
   const wardens = wardenQuery(world)
   const glitches = glitchQuery(world)
+  const cores = coreQuery(world)
 
   // ── Glitch locomotion toward Core ───────────────────────────────
   for (let i = 0; i < glitches.length; i++) {
@@ -47,15 +64,33 @@ export function combatSystem(world: EcsWorld): void {
       onGlitchDeath(world, g)
       continue
     }
+    // Pick a ring tile around the Core on first walk request, then stick to it.
     if (PathTarget.active[g] === 0 && AIState.state[g] === STATE.walking) {
-      PathTarget.gx[g] = CORE_GX
-      PathTarget.gy[g] = CORE_GY
+      const tile = CORE_APPROACH_TILES[g % CORE_APPROACH_TILES.length]
+      PathTarget.gx[g] = tile[0]
+      PathTarget.gy[g] = tile[1]
     }
-    // Glitch reached Core tile? Nibble Tokens.
-    if (GridPos.gx[g] === CORE_GX && GridPos.gy[g] === CORE_GY) {
+    // Glitch close enough to the Core → damage it and die.
+    const dx = GridPos.gx[g] - CORE_GX
+    const dy = GridPos.gy[g] - CORE_GY
+    if (Math.abs(dx) + Math.abs(dy) <= 2) {
+      for (let j = 0; j < cores.length; j++) {
+        Health.hp[cores[j]] = Math.max(0, Health.hp[cores[j]] - 5)
+        refreshCoreHp(world, cores[j])
+      }
       world.pendingMutations.push({ kind: 'resource_delta', resource: 'tokens', delta: -1 })
-      // Destroy this glitch on bite — no loss cascade
       onGlitchDeath(world, g)
+    }
+  }
+
+  // Core slow passive regen when no glitches nearby
+  if (glitches.length === 0) {
+    for (let j = 0; j < cores.length; j++) {
+      const c = cores[j]
+      if (Health.hp[c] < Health.max[c]) {
+        Health.hp[c] = Math.min(Health.max[c], Health.hp[c] + 0.5 * dt)
+        refreshCoreHp(world, c)
+      }
     }
   }
 
@@ -75,7 +110,17 @@ export function combatSystem(world: EcsWorld): void {
       target = findNearestGlitch(glitches, Position.x[w], Position.y[w])
       Aggro.target[w] = target
     }
-    if (target === 0) continue
+    if (target === 0) {
+      // No enemies in sight — head home if not already there.
+      const hx = Home.gx[w]
+      const hy = Home.gy[w]
+      if (PathTarget.active[w] === 0 && (GridPos.gx[w] !== hx || GridPos.gy[w] !== hy)) {
+        PathTarget.gx[w] = hx
+        PathTarget.gy[w] = hy
+        AIState.state[w] = STATE.walking
+      }
+      continue
+    }
 
     const dx = Position.x[target] - Position.x[w]
     const dy = Position.y[target] - Position.y[w]

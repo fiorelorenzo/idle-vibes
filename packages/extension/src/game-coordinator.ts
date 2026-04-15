@@ -19,11 +19,12 @@ import { PassiveHeartbeat } from './sim/passive-heartbeat'
 import { DramaClock } from './sim/drama-clock'
 import { WaveClock } from './sim/wave-clock'
 import { ExpeditionManager } from './sim/expedition-manager'
+import { BuildingEngine } from './sim/building-engine'
 import type { CloudSyncService } from './cloud/sync-service'
 import { performPrestige, computeEchoes } from './sim/prestige'
 import { rollModifierChoices } from './sim/modifier-engine'
 import { computeRunEffects } from './sim/effects-bus'
-import { ECHO_NODE_DEFS, LAYER_INDEX } from '@idle-vibes/shared'
+import { ECHO_NODE_DEFS, LAYER_INDEX, BUILDING_DEFS } from '@idle-vibes/shared'
 
 /**
  * GameCoordinator — host-side authoritative controller.
@@ -43,6 +44,7 @@ export class GameCoordinator {
   private drama = new DramaClock()
   private waves = new WaveClock()
   private expeditions = new ExpeditionManager()
+  private buildings = new BuildingEngine()
   private snapshotDirty = false
   private lastSnapshotSendAt = 0
   private syncFlushTimer: ReturnType<typeof setInterval> | null = null
@@ -63,6 +65,7 @@ export class GameCoordinator {
     this.drama.start((event) => this.emitEvent(event))
     this.waves.start(this.drama, (event) => this.emitEvent(event))
     this.reattachExpeditions()
+    this.buildings.attach(this.snapshot, (event) => this.emitEvent(event))
     return { dispose: () => this.stop() }
   }
 
@@ -79,6 +82,7 @@ export class GameCoordinator {
     this.drama.stop()
     this.waves.stop()
     this.expeditions.stop()
+    this.buildings.stop()
     this.cloudDisposables.forEach((d) => d.dispose())
     this.cloudDisposables = []
     this.persist()
@@ -283,6 +287,34 @@ export class GameCoordinator {
         })
         break
       }
+      case 'place_building': {
+        const def = BUILDING_DEFS.find((d) => d.id === mutation.buildingKind)
+        if (!def) break
+        if (this.snapshot.resources.tokens < def.cost) break
+        // Reject overlap on same tile.
+        const clash = this.snapshot.buildings.find(
+          (b) => b.layer === mutation.layer && b.gx === mutation.gx && b.gy === mutation.gy,
+        )
+        if (clash) break
+        this.snapshot.resources.tokens -= def.cost
+        const building = {
+          id: `b-${Date.now()}-${Math.floor(Math.random() * 9999)}`,
+          kind: mutation.buildingKind,
+          layer: mutation.layer,
+          gx: mutation.gx,
+          gy: mutation.gy,
+          placedAt: Date.now(),
+        }
+        this.snapshot.buildings.push(building)
+        this.emitEvent({
+          kind: 'building_placed',
+          buildingKind: mutation.buildingKind,
+          gx: mutation.gx,
+          gy: mutation.gy,
+          layer: mutation.layer,
+        })
+        break
+      }
       default:
         break
     }
@@ -355,6 +387,7 @@ function createDefaultSnapshot(): WorldSnapshot {
       bossDefeated: false,
     })),
     expeditions: [],
+    buildings: [],
     run: {
       prestigeCount: 0,
       seed: Math.floor(Math.random() * 0x7fffffff),

@@ -32,6 +32,7 @@ export function performPrestige(snapshot: WorldSnapshot): GameEvent[] {
     bossDefeated: false,
   }))
   snapshot.expeditions = []
+  snapshot.buildings = []
   snapshot.run = {
     prestigeCount: snapshot.run.prestigeCount + 1,
     seed: hashRunSeed(snapshot.run.prestigeCount + 1),

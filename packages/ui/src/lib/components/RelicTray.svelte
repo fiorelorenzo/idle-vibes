@@ -31,11 +31,14 @@
 
 <section class="relic-tray">
   <div class="slots">
-    <span class="label">RELICS</span>
+    <span class="label" title="Equipped relics — permanent passives active this run. Drop from bosses and rare expedition events.">RELICS</span>
     {#each Array(slots) as _, i}
       {@const id = equipped[i]}
       {@const def = id ? relicDef(id) : undefined}
-      <div class="slot" title={def?.description ?? 'empty slot'}>
+      <div
+        class="slot"
+        title={def ? `${def.name} (${def.rarity}) — ${def.description}` : 'empty slot — click an owned relic below to equip it here'}
+      >
         {#if def}
           <span class="rarity rarity-{def.rarity}">◈</span>
           <span class="name">{def.name}</span>
@@ -54,7 +57,7 @@
             class="inv-item"
             class:active={equipped.includes(id)}
             on:click={() => toggleEquip(id)}
-            title={def.description}
+            title={`${def.name} (${def.rarity}) — ${def.description}${equipped.includes(id) ? ' · click to unequip' : ' · click to equip'}`}
           >
             {def.name}
           </button>
@@ -68,42 +71,50 @@
   .relic-tray {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 4px 6px;
+    gap: 4px;
+    padding: 6px 10px;
     border-top: 1px solid var(--vscode-panel-border, #333);
     background: var(--vscode-editor-background, #1e1e1e);
-    font-size: 9px;
+    font-size: var(--desc-font-sm, 12px);
     flex: 0 0 auto;
   }
-  .slots { display: flex; gap: 4px; align-items: center; }
+  .slots { display: flex; gap: 6px; align-items: center; }
   .label {
     color: var(--vscode-descriptionForeground, #888);
     letter-spacing: 1px;
-    flex: 0 0 42px;
+    font-weight: bold;
+    flex: 0 0 52px;
+    font-size: var(--desc-font-xs, 11px);
   }
   .slot {
     flex: 1;
     border: 1px solid var(--vscode-panel-border, #333);
-    padding: 2px 4px;
+    padding: 4px 6px;
     display: flex;
-    gap: 3px;
+    gap: 4px;
     align-items: center;
-    min-height: 16px;
+    min-height: 22px;
   }
   .empty { color: var(--vscode-descriptionForeground, #666); }
-  .name { color: var(--vscode-charts-orange, #ff8c00); font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .rarity { font-size: 8px; }
+  .name {
+    color: var(--vscode-charts-orange, #ff8c00);
+    font-size: var(--desc-font-xs, 11px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rarity { font-size: var(--desc-font-sm, 12px); }
   .rarity-common { color: var(--vscode-editor-foreground, #d4d4d4); }
   .rarity-rare { color: var(--vscode-charts-blue, #4daafc); }
   .rarity-legendary { color: var(--vscode-charts-purple, #b180d7); }
-  .inventory { display: flex; flex-wrap: wrap; gap: 2px; }
+  .inventory { display: flex; flex-wrap: wrap; gap: 4px; }
   .inv-item {
     background: transparent;
     border: 1px solid var(--vscode-panel-border, #333);
     color: var(--vscode-descriptionForeground, #888);
     font-family: inherit;
-    font-size: 8px;
-    padding: 1px 4px;
+    font-size: var(--desc-font-xs, 11px);
+    padding: 3px 8px;
     cursor: pointer;
   }
   .inv-item.active {
