@@ -1,5 +1,5 @@
-import { defineQuery } from 'bitecs'
-import { Position, Velocity, Particle } from '../components'
+import { defineQuery, hasComponent } from 'bitecs'
+import { Position, PreviousPosition, Velocity, Particle } from '../components'
 import type { EcsWorld } from '../world'
 import { killEntity } from '../world'
 
@@ -19,6 +19,10 @@ export function particleSystem(world: EcsWorld): void {
     if (Particle.life[eid] <= 0) {
       killEntity(world, eid)
       continue
+    }
+    if (hasComponent(world, PreviousPosition, eid)) {
+      PreviousPosition.x[eid] = Position.x[eid]
+      PreviousPosition.y[eid] = Position.y[eid]
     }
     Velocity.vy[eid] += Particle.gravity[eid] * dt
     Position.x[eid] += Velocity.vx[eid] * dt
