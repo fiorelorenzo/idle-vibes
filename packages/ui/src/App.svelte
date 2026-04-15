@@ -3,8 +3,11 @@
   import { bridge } from './lib/bridge/webview-bridge'
   import { initWorldStore, worldSnapshot } from './lib/stores/world-store'
   import { initCloudSyncStore } from './lib/stores/cloud-sync'
-  import { initThemeStore, theme } from './lib/theme/theme-store'
+  import { initThemeStore } from './lib/theme/theme-store'
   import GameCanvas from './lib/components/GameCanvas.svelte'
+  import LayerTabs from './lib/components/LayerTabs.svelte'
+  import EventFeed from './lib/components/EventFeed.svelte'
+  import ExpeditionPanel from './lib/components/ExpeditionPanel.svelte'
 
   onMount(() => {
     initThemeStore()
@@ -14,13 +17,14 @@
   })
 </script>
 
-<main class="descent" data-theme-kind={$theme.kind}>
+<main class="descent">
   <header class="top">
-    <span class="title">IDLE_VIBES: THE DESCENT</span>
+    <span class="title">IDLE_VIBES :: DESCENT</span>
     {#if $worldSnapshot}
-      <span class="build">run #{$worldSnapshot.run.prestigeCount + 1}</span>
+      <span class="phase">{$worldSnapshot.drama.phase}</span>
+      <span class="run">run #{$worldSnapshot.run.prestigeCount + 1}</span>
     {:else}
-      <span class="build muted">booting…</span>
+      <span class="run muted">booting…</span>
     {/if}
   </header>
 
@@ -32,11 +36,16 @@
     </section>
   {/if}
 
-  <GameCanvas />
+  <div class="stage">
+    <GameCanvas />
+    <LayerTabs />
+  </div>
 
-  <footer class="bottom">
-    <span>the stack grows beneath you</span>
-  </footer>
+  <div class="feed">
+    <EventFeed />
+  </div>
+
+  <ExpeditionPanel />
 </main>
 
 <style>
@@ -50,9 +59,7 @@
     overflow: hidden;
   }
 
-  :global(*) {
-    box-sizing: border-box;
-  }
+  :global(*) { box-sizing: border-box; }
 
   .descent {
     display: flex;
@@ -66,41 +73,42 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 10px;
+    padding: 4px 8px;
     border-bottom: 1px solid var(--vscode-panel-border, #333);
     font-size: 10px;
     color: var(--vscode-descriptionForeground, #888);
     flex: 0 0 auto;
   }
-
-  .title {
-    letter-spacing: 1px;
-    color: var(--vscode-editor-foreground, #d4d4d4);
+  .title { letter-spacing: 1px; color: var(--vscode-editor-foreground, #d4d4d4); }
+  .phase {
+    text-transform: uppercase;
+    color: var(--vscode-charts-orange, #ff8c00);
+    font-size: 9px;
   }
-
-  .muted {
-    opacity: 0.5;
-  }
+  .run { font-size: 9px; }
+  .muted { opacity: 0.5; }
 
   .hud {
     display: flex;
     justify-content: space-around;
-    padding: 4px 10px;
+    padding: 4px 8px;
     border-bottom: 1px solid var(--vscode-panel-border, #333);
     font-size: 11px;
     flex: 0 0 auto;
   }
-
   .res-tokens { color: var(--vscode-charts-blue, #4daafc); }
-  .res-focus { color: var(--vscode-charts-orange, #ff8c00); }
+  .res-focus  { color: var(--vscode-charts-orange, #ff8c00); }
   .res-shards { color: var(--vscode-charts-purple, #b180d7); }
 
-  .bottom {
-    padding: 6px 10px;
-    border-top: 1px solid var(--vscode-panel-border, #333);
-    font-size: 9px;
-    color: var(--vscode-descriptionForeground, #666);
-    text-align: center;
-    flex: 0 0 auto;
+  .stage {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .feed {
+    flex: 0 0 120px;
+    display: flex;
+    flex-direction: column;
   }
 </style>

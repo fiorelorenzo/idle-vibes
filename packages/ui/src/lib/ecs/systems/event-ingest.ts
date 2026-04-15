@@ -1,6 +1,7 @@
 import type { GameEvent } from '@idle-vibes/shared'
 import type { EcsWorld } from '../world'
 import { spawnMote } from '../prefabs/mote'
+import { spawnGlitch } from '../prefabs/glitch'
 import { rand } from '../util/rng'
 
 /**
@@ -79,8 +80,59 @@ function handle(world: EcsWorld, event: GameEvent): void {
         eventKind: 'flow_cascade',
       })
       break
+    case 'glitch_spawn': {
+      for (let i = 0; i < event.count; i++) {
+        const crackGx = 2 + Math.floor(rand(world) * (world.grid.width - 4))
+        const crackGy = 14 + Math.floor(rand(world) * 4)
+        spawnGlitch(world, crackGx, crackGy, event.glitchType)
+      }
+      world.pendingLogs.push({
+        id: `glitch-${world.tick}`,
+        ts: Date.now(),
+        severity: 'danger',
+        text: `${event.count}× ${event.glitchType.replace('_', ' ')} (${event.reason})`,
+        eventKind: 'glitch_spawn',
+      })
+      break
+    }
+    case 'phase_change':
+      world.pendingLogs.push({
+        id: `phase-${world.tick}`,
+        ts: Date.now(),
+        severity: 'lore',
+        text: `// phase → ${event.phase}`,
+        eventKind: 'phase_change',
+      })
+      break
+    case 'summon_spirit':
+      world.pendingLogs.push({
+        id: `spirit-${world.tick}`,
+        ts: Date.now(),
+        severity: 'success',
+        text: 'companion spirit summoned',
+        eventKind: 'summon_spirit',
+      })
+      break
+    case 'portal_open':
+      world.pendingLogs.push({
+        id: `portal-${world.tick}`,
+        ts: Date.now(),
+        severity: 'info',
+        text: `portal opens (${Math.floor(event.durationMs / 1000)}s)`,
+        eventKind: 'portal_open',
+      })
+      break
+    case 'platform_grow':
+      world.pendingMutations.push({ kind: 'layer_rows_grew', layer: event.layer })
+      world.pendingLogs.push({
+        id: `grow-${world.tick}`,
+        ts: Date.now(),
+        severity: 'info',
+        text: `the stack grows · ${event.layer}`,
+        eventKind: 'platform_grow',
+      })
+      break
     default:
-      // Many event kinds are handled in later phases (glitch_spawn, boss_spawn, etc.)
       break
   }
 }

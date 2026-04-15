@@ -1,5 +1,6 @@
 import type { EcsWorld } from '../world'
 import { bridge } from '../../bridge/webview-bridge'
+import { pushLog } from '../../stores/event-log-store'
 
 /**
  * Flushes pending world mutations and log entries to the extension host.
@@ -22,6 +23,7 @@ export function mutationFlushSystem(world: EcsWorld): void {
   }
   if (world.pendingLogs.length > 0) {
     for (const entry of world.pendingLogs) {
+      pushLog(entry)
       bridge.send({ type: 'ui:log-event', entry })
     }
     world.pendingLogs.length = 0

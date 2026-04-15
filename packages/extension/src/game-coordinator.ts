@@ -16,6 +16,9 @@ import type { ExtensionBridge } from './bridge/host'
 import type { LocalStateStorage } from './storage/local-state'
 import { ParserRateLimiter } from './sim/parser-rate-limiter'
 import { PassiveHeartbeat } from './sim/passive-heartbeat'
+import { DramaClock } from './sim/drama-clock'
+import { WaveClock } from './sim/wave-clock'
+import { ExpeditionManager } from './sim/expedition-manager'
 
 /**
  * GameCoordinator — host-side authoritative controller.
@@ -32,6 +35,12 @@ export class GameCoordinator {
   private saveTimer: ReturnType<typeof setInterval> | null = null
   private rateLimiter = new ParserRateLimiter()
   private heartbeat = new PassiveHeartbeat()
+  private drama = new DramaClock()
+  private waves = new WaveClock()
+  private expeditions = new ExpeditionManager()
+  private snapshotDirty = false
+  private lastSnapshotSendAt = 0
+  private syncFlushTimer: ReturnType<typeof setInterval> | null = null
 
   constructor(
     private readonly bridge: ExtensionBridge,
@@ -42,7 +51,11 @@ export class GameCoordinator {
 
   start(): { dispose(): void } {
     this.saveTimer = setInterval(() => this.persist(), 30_000)
+    this.syncFlushTimer = setInterval(() => this.flushDirtySnapshot(), 500)
     this.heartbeat.start((event) => this.emitEvent(event))
+    this.drama.start((event) => this.emitEvent(event))
+    this.waves.start(this.drama, (event) => this.emitEvent(event))
+    this.expeditions.attach(this.snapshot, (event) => this.emitEvent(event))
     return { dispose: () => this.stop() }
   }
 
@@ -51,7 +64,14 @@ export class GameCoordinator {
       clearInterval(this.saveTimer)
       this.saveTimer = null
     }
+    if (this.syncFlushTimer) {
+      clearInterval(this.syncFlushTimer)
+      this.syncFlushTimer = null
+    }
     this.heartbeat.stop()
+    this.drama.stop()
+    this.waves.stop()
+    this.expeditions.stop()
     this.persist()
   }
 
@@ -77,6 +97,14 @@ export class GameCoordinator {
   }
 
   private sendSnapshot(): void {
+    const now = Date.now()
+    if (now - this.lastSnapshotSendAt < 250) {
+      // Coalesce rapid resyncs — the snapshot is small but postMessage isn't free.
+      this.snapshotDirty = true
+      return
+    }
+    this.lastSnapshotSendAt = now
+    this.snapshotDirty = false
     this.bridge.send({
       type: 'ext:world-snapshot',
       snapshot: this.snapshot,
@@ -84,9 +112,25 @@ export class GameCoordinator {
     })
   }
 
+  private flushDirtySnapshot(): void {
+    if (this.snapshotDirty) this.sendSnapshot()
+  }
+
   private emitEvent(event: GameEvent): void {
     this.tick++
     this.bridge.send({ type: 'ext:game-event', event, tick: this.tick })
+    // Certain events change the snapshot materially on the host — re-send
+    // a full snapshot so the webview UI (HUD, expeditions, layer state)
+    // stays in sync without a separate sync channel.
+    if (
+      event.kind === 'expedition_start' ||
+      event.kind === 'expedition_return' ||
+      event.kind === 'platform_grow' ||
+      event.kind === 'boss_defeated' ||
+      event.kind === 'phase_change'
+    ) {
+      this.sendSnapshot()
+    }
   }
 
   private applyMutation(mutation: WorldMutation): void {
@@ -94,6 +138,9 @@ export class GameCoordinator {
       case 'resource_delta': {
         const current = this.snapshot.resources[mutation.resource] ?? 0
         this.snapshot.resources[mutation.resource] = Math.max(0, current + mutation.delta)
+        // Lightweight resync so the HUD ticks up visibly (we'd rather burn
+        // a few KB over the bridge than chase reactivity bugs).
+        this.sendSnapshot()
         break
       }
       case 'boss_defeated': {
@@ -146,6 +193,9 @@ export class GameCoordinator {
       }
       case 'pick_modifier':
         this.snapshot.run.modifierId = mutation.modifierId
+        break
+      case 'expedition_start':
+        this.expeditions.start(mutation.delverId, mutation.targetLayer, mutation.durationMs)
         break
       default:
         break
