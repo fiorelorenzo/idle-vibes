@@ -3,18 +3,35 @@
   import { RESOURCES } from '@idle-vibes/shared'
   import type { ResourceId } from '@idle-vibes/shared'
 
-  const BAR_WIDTH = 20
   const DISPLAY_RESOURCES: ResourceId[] = [
     'raw_data', 'volatile_energy', 'stabilized_energy',
     'pure_energy', 'vibe_charge',
   ]
 
-  function formatBar(current: number, cap: number | null): string {
-    if (cap === null) return `${Math.floor(current)}`
-    const filled = Math.round((current / cap) * BAR_WIDTH)
-    const bar = '\u2588'.repeat(Math.min(filled, BAR_WIDTH)) +
-      '\u2591'.repeat(Math.max(0, BAR_WIDTH - filled))
-    return `${bar}  ${Math.floor(current)} / ${cap}`
+  // Track previous values for change highlighting
+  let prevValues: Record<string, number> = {}
+  let flashStates: Record<string, 'up' | 'down' | null> = {}
+
+  $: {
+    for (const id of DISPLAY_RESOURCES) {
+      const current = Math.floor($resources[id])
+      const prev = prevValues[id]
+      if (prev !== undefined && current !== prev) {
+        flashStates[id] = current > prev ? 'up' : 'down'
+        // Clear flash after animation
+        const capturedId = id
+        setTimeout(() => {
+          flashStates[capturedId] = null
+          flashStates = flashStates // trigger reactivity
+        }, 400)
+      }
+      prevValues[id] = current
+    }
+  }
+
+  function fillPercent(current: number, cap: number | null): number {
+    if (cap === null || cap === 0) return 0
+    return Math.min(100, (current / cap) * 100)
   }
 
   function resourceLabel(id: ResourceId): string {
@@ -26,9 +43,13 @@
   {#each DISPLAY_RESOURCES as id}
     {@const def = RESOURCES[id]}
     {@const value = $resources[id]}
-    <div class="resource-row">
+    {@const flash = flashStates[id]}
+    <div class="resource-row" class:flash-up={flash === 'up'} class:flash-down={flash === 'down'}>
       <span class="resource-name">{resourceLabel(id)}</span>
-      <span class="resource-value">{formatBar(value, def.baseCap)}</span>
+      <div class="bar-container">
+        <div class="bar-fill" style="width: {fillPercent(value, def.baseCap)}%"></div>
+      </div>
+      <span class="resource-value">{Math.floor(value)}{def.baseCap ? ` / ${def.baseCap}` : ''}</span>
     </div>
   {/each}
 
@@ -57,7 +78,17 @@
   .resource-row {
     display: flex;
     gap: 8px;
+    align-items: center;
     line-height: 1.6;
+    transition: background-color 0.3s ease;
+  }
+
+  .resource-row.flash-up {
+    animation: flash-green 0.4s ease-out;
+  }
+
+  .resource-row.flash-down {
+    animation: flash-red 0.4s ease-out;
   }
 
   .resource-name {
@@ -65,9 +96,23 @@
     min-width: 96px;
   }
 
+  .bar-container {
+    width: 80px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+  }
+
+  .bar-fill {
+    height: 100%;
+    background: #888;
+    transition: width 0.4s ease-out;
+  }
+
   .resource-value {
     color: #ccc;
-    letter-spacing: -0.5px;
+    font-size: 9px;
   }
 
   .persistent .resource-name {
@@ -76,5 +121,15 @@
 
   .persistent .resource-value {
     color: #aa88ff;
+  }
+
+  @keyframes flash-green {
+    0% { background-color: rgba(0, 255, 136, 0.15); }
+    100% { background-color: transparent; }
+  }
+
+  @keyframes flash-red {
+    0% { background-color: rgba(255, 68, 68, 0.15); }
+    100% { background-color: transparent; }
   }
 </style>

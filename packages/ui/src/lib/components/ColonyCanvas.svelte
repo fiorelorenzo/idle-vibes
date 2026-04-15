@@ -3,6 +3,7 @@
   import { ColonyRenderer } from '../engine/colony'
   import { gameState } from '../stores/game-state'
   import { bridge } from '../bridge/webview-bridge'
+  import { pushEvent } from '../stores/events'
   import type { ColonyAction } from '@idle-vibes/shared'
 
   let canvasEl: HTMLCanvasElement
@@ -29,8 +30,15 @@
 
   function handleClick(event: MouseEvent) {
     const rect = canvasEl.getBoundingClientRect()
-    const x = Math.floor((event.clientX - rect.left) / 16)
-    const y = Math.floor((event.clientY - rect.top) / 16)
+    const scaleX = canvasEl.width / rect.width
+    const scaleY = canvasEl.height / rect.height
+    const pixelX = (event.clientX - rect.left) * scaleX
+    const pixelY = (event.clientY - rect.top) * scaleY
+    const x = Math.floor(pixelX / 16)
+    const y = Math.floor(pixelY / 16)
+
+    // Click feedback particles
+    renderer?.getEffectTriggers()?.onCanvasClick(pixelX, pixelY)
 
     // Check if clicking on a glitch
     let state: import('@idle-vibes/shared').GameState | undefined
@@ -45,6 +53,7 @@
     if (glitch) {
       const action: ColonyAction = { kind: 'click_glitch', glitchId: glitch.id }
       bridge.send({ type: 'ui:colony-action', action })
+      pushEvent(`${glitch.type.replace(/_/g, ' ')} resolved!`, 'success')
     }
   }
 </script>
@@ -70,5 +79,10 @@
     height: auto;
     display: block;
     cursor: pointer;
+    transition: transform 0.05s ease;
+  }
+
+  canvas:active {
+    transform: scale(0.995);
   }
 </style>
