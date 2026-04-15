@@ -14,23 +14,24 @@ import {
 } from '@idle-vibes/shared'
 import type { ExtensionBridge } from './bridge/host'
 import type { LocalStateStorage } from './storage/local-state'
+import { ParserRateLimiter } from './sim/parser-rate-limiter'
+import { PassiveHeartbeat } from './sim/passive-heartbeat'
 
 /**
  * GameCoordinator — host-side authoritative controller.
  *
- * Responsibilities:
- *   - Owns the WorldSnapshot (resources, unlocks, expeditions, meta).
- *   - Translates ParserSignal → GameEvent with rate limits (to be added in Phase 3).
- *   - Applies WorldMutation commands from the webview and persists.
- *   - Streams events to the webview via the bridge.
- *
- * Phase 0 scope: just boot a default snapshot, send it on ui:ready, and
- * apply resource_delta mutations. Everything else is a stub.
+ * - Owns the WorldSnapshot
+ * - Translates ParserSignal → GameEvent (rate-limited)
+ * - Runs the passive heartbeat (always-alive trickle)
+ * - Applies WorldMutations from the webview, persists
+ * - Streams events to the webview via the bridge
  */
 export class GameCoordinator {
   private snapshot: WorldSnapshot
   private tick = 0
   private saveTimer: ReturnType<typeof setInterval> | null = null
+  private rateLimiter = new ParserRateLimiter()
+  private heartbeat = new PassiveHeartbeat()
 
   constructor(
     private readonly bridge: ExtensionBridge,
@@ -41,6 +42,7 @@ export class GameCoordinator {
 
   start(): { dispose(): void } {
     this.saveTimer = setInterval(() => this.persist(), 30_000)
+    this.heartbeat.start((event) => this.emitEvent(event))
     return { dispose: () => this.stop() }
   }
 
@@ -49,20 +51,17 @@ export class GameCoordinator {
       clearInterval(this.saveTimer)
       this.saveTimer = null
     }
+    this.heartbeat.stop()
     this.persist()
   }
 
-  /**
-   * Handle a parser signal. Phase 0: no translation yet.
-   * Phase 3+: translate to GameEvent with rate limits, emit via `emitEvent`.
-   */
-  handleParserSignal(_signal: ParserSignal): void {
-    // no-op in Phase 0 — the coordinator only echoes the snapshot.
+  handleParserSignal(signal: ParserSignal): void {
+    const events = this.rateLimiter.translate(signal)
+    for (const event of events) {
+      this.emitEvent(event)
+    }
   }
 
-  /**
-   * Handle a webview message. Mutations update the snapshot authoritatively.
-   */
   handleWebviewMessage(msg: WebviewMessage): void {
     switch (msg.type) {
       case 'ui:ready':
@@ -72,7 +71,6 @@ export class GameCoordinator {
       case 'ui:world-mutation':
         this.applyMutation(msg.mutation)
         break
-      // Other message types wired up in later phases
       default:
         break
     }
@@ -94,11 +92,61 @@ export class GameCoordinator {
   private applyMutation(mutation: WorldMutation): void {
     switch (mutation.kind) {
       case 'resource_delta': {
-        const next = this.snapshot.resources[mutation.resource] + mutation.delta
-        this.snapshot.resources[mutation.resource] = Math.max(0, next)
+        const current = this.snapshot.resources[mutation.resource] ?? 0
+        this.snapshot.resources[mutation.resource] = Math.max(0, current + mutation.delta)
         break
       }
-      // Other mutations wired in Phase 5/7/8
+      case 'boss_defeated': {
+        const layer = this.snapshot.layers.find((l) => l.id === mutation.layer)
+        if (layer) {
+          layer.bossDefeated = true
+          this.snapshot.run.bossesKilled++
+        }
+        break
+      }
+      case 'unlock_layer': {
+        const layer = this.snapshot.layers.find((l) => l.id === mutation.layer)
+        if (layer && !layer.unlocked && this.snapshot.resources.shards >= mutation.cost) {
+          this.snapshot.resources.shards -= mutation.cost
+          layer.unlocked = true
+          this.snapshot.run.layersCleared++
+        }
+        break
+      }
+      case 'layer_rows_grew': {
+        const layer = this.snapshot.layers.find((l) => l.id === mutation.layer)
+        if (layer && layer.rows < 32) layer.rows++
+        break
+      }
+      case 'layer_stability': {
+        const layer = this.snapshot.layers.find((l) => l.id === mutation.layer)
+        if (layer) {
+          layer.stability = Math.max(0, Math.min(100, layer.stability + mutation.delta))
+        }
+        break
+      }
+      case 'tutorial_advance':
+        this.snapshot.tutorial.step = mutation.step
+        break
+      case 'equip_relic': {
+        const { relicId, slot } = mutation
+        const equipped = this.snapshot.meta.equippedRelics.slice()
+        while (equipped.length <= slot) equipped.push('')
+        equipped[slot] = relicId
+        this.snapshot.meta.equippedRelics = equipped.filter(Boolean)
+        break
+      }
+      case 'buy_echo_node': {
+        if (this.snapshot.meta.echoes >= mutation.cost) {
+          this.snapshot.meta.echoes -= mutation.cost
+          this.snapshot.meta.echoNodes[mutation.nodeId] =
+            (this.snapshot.meta.echoNodes[mutation.nodeId] ?? 0) + 1
+        }
+        break
+      }
+      case 'pick_modifier':
+        this.snapshot.run.modifierId = mutation.modifierId
+        break
       default:
         break
     }

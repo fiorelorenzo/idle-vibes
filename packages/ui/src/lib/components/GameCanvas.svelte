@@ -2,10 +2,13 @@
   import { onMount, onDestroy } from 'svelte'
   import { createPixiApp, VIRTUAL_WIDTH, type PixiApp } from '../render/pixi-app'
   import { createStaticTilemap } from '../render/tiles'
+  import { startGameLoop, type GameRuntime } from '../ecs/game-loop'
+  import { spawnScribe } from '../ecs/prefabs/scribe'
 
   let container: HTMLDivElement
   let canvas: HTMLCanvasElement
   let pixi: PixiApp | null = null
+  let runtime: GameRuntime | null = null
   let resizeObserver: ResizeObserver | null = null
 
   function handleResize(): void {
@@ -25,10 +28,19 @@
     handleResize()
     resizeObserver = new ResizeObserver(() => handleResize())
     resizeObserver.observe(container)
+
+    runtime = startGameLoop(pixi)
+
+    // Phase 2 smoke test: three Scribes pacing around the Core row.
+    spawnScribe(runtime.world, 8, 4)
+    spawnScribe(runtime.world, 10, 4)
+    spawnScribe(runtime.world, 12, 4)
   })
 
   onDestroy(() => {
     resizeObserver?.disconnect()
+    runtime?.stop()
+    runtime = null
     pixi?.destroy()
     pixi = null
   })

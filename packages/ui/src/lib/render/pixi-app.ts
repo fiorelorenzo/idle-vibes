@@ -13,6 +13,8 @@ export interface PixiApp {
     effects: Container
     hud: Container
   }
+  /** Mutable reference updated on every theme change. Renderers read this. */
+  themeInts: ThemeInts
   resize(width: number, height: number): void
   destroy(): void
 }
@@ -48,6 +50,7 @@ export async function createPixiApp(canvas: HTMLCanvasElement): Promise<PixiApp>
     app,
     stage,
     layers: { ambient, map, entities, effects, hud },
+    themeInts: {} as ThemeInts,
     resize(width, height) {
       app.renderer.resize(width, height)
     },
@@ -56,13 +59,8 @@ export async function createPixiApp(canvas: HTMLCanvasElement): Promise<PixiApp>
     },
   }
 
-  // Theme-driven background clear color (transparent canvas,
-  // but we also render an ambient background container tinted to editor bg)
   onThemeChange((_colors, ints: ThemeInts) => {
-    // Transparent canvas lets the VS Code editor background show through.
-    // Nothing to do for the clear color — we keep backgroundAlpha = 0.
-    // But expose the editor bg on the root so sprites can sample from it:
-    ;(app.stage as Container & { bgInt?: number }).bgInt = ints.editorBackground
+    handle.themeInts = ints
   })
 
   return handle
