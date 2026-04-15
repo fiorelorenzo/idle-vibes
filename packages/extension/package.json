@@ -94,6 +94,12 @@
         "title": "Force Prestige",
         "category": "idle_vibes [DEV]",
         "enablement": "idle_vibes:devMode"
+      },
+      {
+        "command": "idleVibes.dev.wipeLocalSave",
+        "title": "Wipe Local Save",
+        "category": "idle_vibes [DEV]",
+        "enablement": "idle_vibes:devMode"
       }
     ],
     "configuration": {

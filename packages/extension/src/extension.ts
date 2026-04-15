@@ -32,6 +32,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const bridge = new ExtensionBridge()
   const storage = new LocalStateStorage(context.globalState)
+  void storage.cleanLegacy()
   const parser = new SmartParser()
   const coordinator = new GameCoordinator(bridge, storage)
   const theme = new ThemeBridge(bridge)
@@ -77,6 +78,18 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('idleVibes.dev.forcePrestige', () => {
       coordinator.handleWebviewMessage({ type: 'ui:request-prestige' })
       vscode.window.showInformationMessage('[idle_vibes] prestige forced')
+    }),
+    vscode.commands.registerCommand('idleVibes.dev.wipeLocalSave', async () => {
+      const pick = await vscode.window.showWarningMessage(
+        'Wipe the local idle_vibes save? This will reset the colony, Echoes, and owned relics. Cloud saves are not touched.',
+        { modal: true },
+        'Wipe',
+      )
+      if (pick !== 'Wipe') return
+      await storage.clear()
+      await storage.cleanLegacy()
+      coordinator.resetLocalState()
+      vscode.window.showInformationMessage('[idle_vibes] local save wiped')
     }),
     vscode.commands.registerCommand('idleVibes.reloadWebview', () => {
       provider.reload()

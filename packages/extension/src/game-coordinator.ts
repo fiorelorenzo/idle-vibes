@@ -260,6 +260,20 @@ export class GameCoordinator {
   }
 
   /**
+   * Replace the in-memory snapshot with a fresh default. Use after the
+   * storage has been cleared so the webview receives a clean world on
+   * the next sendSnapshot().
+   */
+  resetLocalState(): void {
+    this.snapshot = createDefaultSnapshot()
+    this.expeditions.stop()
+    this.expeditions = new ExpeditionManager()
+    this.expeditions.attach(this.snapshot, (event) => this.emitEvent(event))
+    this.sendSnapshot()
+    this.persist()
+  }
+
+  /**
    * Attach a cloud sync service. On the sync tick the coordinator pushes
    * the current snapshot; on attach it attempts a one-shot load and, if
    * the cloud save is newer than the local one, replaces the local state.
