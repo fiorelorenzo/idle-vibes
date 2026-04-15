@@ -19,6 +19,9 @@ import { PassiveHeartbeat } from './sim/passive-heartbeat'
 import { DramaClock } from './sim/drama-clock'
 import { WaveClock } from './sim/wave-clock'
 import { ExpeditionManager } from './sim/expedition-manager'
+import { performPrestige, computeEchoes } from './sim/prestige'
+import { rollModifierChoices, resolveModifier } from './sim/modifier-engine'
+import { ECHO_NODE_DEFS } from '@idle-vibes/shared'
 
 /**
  * GameCoordinator — host-side authoritative controller.
@@ -76,7 +79,8 @@ export class GameCoordinator {
   }
 
   handleParserSignal(signal: ParserSignal): void {
-    const events = this.rateLimiter.translate(signal)
+    const effects = resolveModifier(this.snapshot)
+    const events = this.rateLimiter.translate(signal, effects)
     for (const event of events) {
       this.emitEvent(event)
     }
@@ -91,9 +95,30 @@ export class GameCoordinator {
       case 'ui:world-mutation':
         this.applyMutation(msg.mutation)
         break
+      case 'ui:request-prestige':
+        this.prestige()
+        break
       default:
         break
     }
+  }
+
+  private prestige(): void {
+    performPrestige(this.snapshot)
+    this.expeditions.stop()
+    this.expeditions = new ExpeditionManager()
+    this.expeditions.attach(this.snapshot, (event) => this.emitEvent(event))
+    this.persist()
+    this.sendSnapshot()
+  }
+
+  getEchoPreview(): number {
+    return computeEchoes(this.snapshot)
+  }
+
+  /** Returns 3 random modifier ids for the run picker. */
+  rollModifiers(): string[] {
+    return rollModifierChoices(this.snapshot)
   }
 
   private sendSnapshot(): void {
@@ -184,10 +209,23 @@ export class GameCoordinator {
         break
       }
       case 'buy_echo_node': {
-        if (this.snapshot.meta.echoes >= mutation.cost) {
-          this.snapshot.meta.echoes -= mutation.cost
-          this.snapshot.meta.echoNodes[mutation.nodeId] =
-            (this.snapshot.meta.echoNodes[mutation.nodeId] ?? 0) + 1
+        const def = ECHO_NODE_DEFS.find((n) => n.id === mutation.nodeId)
+        if (!def) break
+        const currentRank = this.snapshot.meta.echoNodes[mutation.nodeId] ?? 0
+        if (currentRank >= def.maxRank) break
+        const cost = def.baseCost * (currentRank + 1)
+        if (this.snapshot.meta.echoes < cost) break
+        this.snapshot.meta.echoes -= cost
+        this.snapshot.meta.echoNodes[mutation.nodeId] = currentRank + 1
+        // Unlock side-effects from one-shot unlock nodes
+        if (def.grant.kind === 'unlock_relic' && def.grant.target) {
+          if (!this.snapshot.meta.ownedRelics.includes(def.grant.target)) {
+            this.snapshot.meta.ownedRelics.push(def.grant.target)
+          }
+        } else if (def.grant.kind === 'unlock_modifier' && def.grant.target) {
+          if (!this.snapshot.meta.unlockedModifiers.includes(def.grant.target)) {
+            this.snapshot.meta.unlockedModifiers.push(def.grant.target)
+          }
         }
         break
       }
@@ -241,9 +279,9 @@ function createDefaultSnapshot(): WorldSnapshot {
       echoes: 0,
       echoNodes: {},
       equippedRelics: [],
-      ownedRelics: [],
+      ownedRelics: ['token_lens'],
       unlockedModifiers: [],
-      unlockedKinTypes: ['scribe'],
+      unlockedKinTypes: ['scribe', 'warden', 'delver'],
       loreEntries: [],
       totalPrestiges: 0,
     },

@@ -13,6 +13,8 @@ import { eventIngestSystem } from './event-ingest'
 import { moteFallSystem } from './mote-fall'
 import { mutationFlushSystem } from './mutation-flush'
 import { pixiRenderSystem } from './pixi-render'
+import { ambientSystem } from './ambient'
+import { dayNightSystem } from './day-night'
 
 /**
  * Fixed simulation-tick systems. Runs at ~20Hz.
@@ -31,6 +33,8 @@ export function runSimulationTick(world: EcsWorld, dt: number): void {
   moteFallSystem(world)
   combatSystem(world)
   animationSystem(world)
+  ambientSystem(world)
+  dayNightSystem(world)
   particleSystem(world)
   floatingTextSystem(world)
   lifetimeSystem(world)

@@ -82,6 +82,18 @@
         "title": "Stop Flow Simulation",
         "category": "idle_vibes [DEV]",
         "enablement": "idle_vibes:devMode"
+      },
+      {
+        "command": "idleVibes.dev.grantEchoes",
+        "title": "Grant 20 Echoes",
+        "category": "idle_vibes [DEV]",
+        "enablement": "idle_vibes:devMode"
+      },
+      {
+        "command": "idleVibes.dev.forcePrestige",
+        "title": "Force Prestige",
+        "category": "idle_vibes [DEV]",
+        "enablement": "idle_vibes:devMode"
       }
     ],
     "configuration": {

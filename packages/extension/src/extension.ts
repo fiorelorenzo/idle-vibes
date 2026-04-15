@@ -66,8 +66,20 @@ export function activate(context: vscode.ExtensionContext): void {
         `[idle_vibes] run ${snapshot.run.prestigeCount + 1}, ` +
         `tokens=${snapshot.resources.tokens}, ` +
         `focus=${snapshot.resources.focus}, ` +
-        `shards=${snapshot.resources.shards}`,
+        `shards=${snapshot.resources.shards}, ` +
+        `echoes=${snapshot.meta.echoes}, ` +
+        `phase=${snapshot.drama.phase}`,
       )
+    }),
+    vscode.commands.registerCommand('idleVibes.dev.grantEchoes', () => {
+      const snap = coordinator.getSnapshot()
+      snap.meta.echoes += 20
+      coordinator.handleWebviewMessage({ type: 'ui:request-snapshot' })
+      vscode.window.showInformationMessage('[idle_vibes] +20 echoes granted')
+    }),
+    vscode.commands.registerCommand('idleVibes.dev.forcePrestige', () => {
+      coordinator.handleWebviewMessage({ type: 'ui:request-prestige' })
+      vscode.window.showInformationMessage('[idle_vibes] prestige forced')
     }),
     vscode.commands.registerCommand('idleVibes.reloadWebview', () => {
       provider.reload()

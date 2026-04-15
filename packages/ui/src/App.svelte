@@ -8,6 +8,10 @@
   import LayerTabs from './lib/components/LayerTabs.svelte'
   import EventFeed from './lib/components/EventFeed.svelte'
   import ExpeditionPanel from './lib/components/ExpeditionPanel.svelte'
+  import CommandBar from './lib/components/CommandBar.svelte'
+  import PrestigeButton from './lib/components/PrestigeButton.svelte'
+  import RelicTray from './lib/components/RelicTray.svelte'
+  import MetaToolbar from './lib/components/MetaToolbar.svelte'
 
   onMount(() => {
     initThemeStore()
@@ -46,6 +50,10 @@
   </div>
 
   <ExpeditionPanel />
+  <RelicTray />
+  <PrestigeButton />
+  <CommandBar />
+  <MetaToolbar />
 </main>
 
 <style>

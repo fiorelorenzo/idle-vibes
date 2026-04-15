@@ -1,5 +1,6 @@
 import type { ParserSignal, GameEvent } from '@idle-vibes/shared'
 import { RATE_LIMITS } from '@idle-vibes/shared'
+import type { ModifierEffects } from './modifier-engine'
 
 /**
  * Converts raw parser signals into game events, applying rate limits so
@@ -23,12 +24,13 @@ export class ParserRateLimiter {
     this.spiritActive = false
   }
 
-  translate(signal: ParserSignal): GameEvent[] {
+  translate(signal: ParserSignal, effects?: ModifierEffects): GameEvent[] {
     const now = Date.now()
     const out: GameEvent[] = []
 
     switch (signal.type) {
       case 'ai_token_bundle': {
+        if (effects?.suppressMoteRainUntilCommit) break
         if (now - this.lastMoteRainAt >= RATE_LIMITS.moteRainMinIntervalMs) {
           this.lastMoteRainAt = now
           const count = clamp(Math.ceil(signal.value / 80), 2, 10)
