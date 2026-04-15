@@ -4,23 +4,18 @@ import { ColonyViewProvider } from './webview-provider'
 import { ExtensionBridge } from './bridge/host'
 import { LocalStateStorage } from './storage/local-state'
 import { SmartParser } from './parser/index'
-import { VibeEngine } from './vibe/vibe-engine'
-import { GameEngine } from './game-engine'
+import { GameCoordinator } from './game-coordinator'
+import { ThemeBridge } from './theme/theme-bridge'
 import { InstanceLock } from './instance-lock'
 import { DevSimulator } from './parser/dev-simulator'
 import { CloudSyncService } from './cloud/sync-service'
 
 export function activate(context: vscode.ExtensionContext): void {
   const devMode = context.extensionMode === vscode.ExtensionMode.Development
-
-  // Set context key so dev-only commands show in the command palette
   vscode.commands.executeCommand('setContext', 'idle_vibes:devMode', devMode)
 
   if (devMode) {
     console.log('[idle_vibes] Running in development mode')
-
-    // Add the project folder to the workspace if nothing is open.
-    // The extension lives at <root>/packages/extension — project root is two levels up.
     if (!vscode.workspace.workspaceFolders?.length) {
       const projectRoot = vscode.Uri.file(path.resolve(context.extensionUri.fsPath, '..', '..'))
       console.log(`[idle_vibes] No workspace folder open, adding: ${projectRoot.fsPath}`)
@@ -42,16 +37,14 @@ export function activate(context: vscode.ExtensionContext): void {
   const bridge = new ExtensionBridge()
   const storage = new LocalStateStorage(context.globalState)
   const parser = new SmartParser()
-  const vibeEngine = new VibeEngine()
-  const gameEngine = new GameEngine(bridge, storage, parser, vibeEngine)
+  const coordinator = new GameCoordinator(bridge, storage)
+  const theme = new ThemeBridge(bridge)
 
-  // ── Cloud sync ─────────────────────────────────────────────
+  // ── Cloud sync (wire-up happens in Phase 7 with the new prestige flow) ──
   const apiUrl = process.env.VITE_API_URL ?? 'http://127.0.0.1:8787'
   const cloudSync = new CloudSyncService(apiUrl)
-  gameEngine.setCloudSync(cloudSync)
   context.subscriptions.push(cloudSync)
 
-  // Auto sign-in: try silent restore first, prompt if no session exists
   cloudSync.enable().catch(() => {
     // If user declines or network fails, keep going offline
   })
@@ -68,7 +61,13 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.commands.executeCommand('idleVibes.colonyView.focus')
     }),
     vscode.commands.registerCommand('idleVibes.showPerformanceStats', () => {
-      gameEngine.showPerformanceStats()
+      const snapshot = coordinator.getSnapshot()
+      vscode.window.showInformationMessage(
+        `[idle_vibes] run ${snapshot.run.prestigeCount + 1}, ` +
+        `tokens=${snapshot.resources.tokens}, ` +
+        `focus=${snapshot.resources.focus}, ` +
+        `shards=${snapshot.resources.shards}`,
+      )
     }),
     vscode.commands.registerCommand('idleVibes.reloadWebview', () => {
       provider.reload()
@@ -88,14 +87,15 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   )
 
-  // ── Parser + game engine ───────────────────────────────────
+  // ── Parser + coordinator ───────────────────────────────────
   context.subscriptions.push(parser.start())
-  context.subscriptions.push(gameEngine.start())
+  context.subscriptions.push(coordinator.start())
+  context.subscriptions.push(theme.start())
 
   context.subscriptions.push(
     parser.onSignal((signal) => {
       if (lock.isLeader) {
-        gameEngine.handleParserSignal(signal)
+        coordinator.handleParserSignal(signal)
       }
       bridge.send({ type: 'ext:parser-signal', signal })
     }),
@@ -103,8 +103,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     bridge.onMessage((msg) => {
+      if (msg.type === 'ui:ready') {
+        // Re-push theme colors on webview ready so it gets them even before
+        // first onDidChangeActiveColorTheme fires.
+        theme.push()
+      }
       if (lock.isLeader) {
-        gameEngine.handleWebviewMessage(msg)
+        coordinator.handleWebviewMessage(msg)
       }
     }),
   )
@@ -115,7 +120,6 @@ export function activate(context: vscode.ExtensionContext): void {
     const watcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(mediaPath, '*.{js,css}'),
     )
-    // Debounce: vite writes multiple files per build, reload once after they settle
     let reloadTimer: ReturnType<typeof setTimeout> | undefined
     const debouncedReload = () => {
       clearTimeout(reloadTimer)
@@ -128,7 +132,6 @@ export function activate(context: vscode.ExtensionContext): void {
     watcher.onDidCreate(debouncedReload)
     context.subscriptions.push(watcher)
 
-    // Dev simulator
     console.log('[idle_vibes] Simulator commands available in command palette')
     const simulator = new DevSimulator((signal) => {
       parser.inject(signal)

@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@idle-vibes/shared": "*",
+    "bitecs": "0.3.40",
     "pixi.js": "^8.0.0"
   },
   "devDependencies": {

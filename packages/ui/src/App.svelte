@@ -1,167 +1,106 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { bridge } from './lib/bridge/webview-bridge'
-  import { initGameStore, colony, vibe } from './lib/stores/game-state'
-  import { codexOpen } from './lib/stores/codex'
-  import { cloudSync, initCloudSyncStore } from './lib/stores/cloud-sync'
-  import { pushEvent } from './lib/stores/events'
-  import VibeMeter from './lib/components/VibeMeter.svelte'
-  import ResourceBar from './lib/components/ResourceBar.svelte'
-  import ColonyCanvas from './lib/components/ColonyCanvas.svelte'
-  import ProxyList from './lib/components/ProxyList.svelte'
-  import GlitchList from './lib/components/GlitchList.svelte'
-  import BuildPanel from './lib/components/BuildPanel.svelte'
-  import RecruitPanel from './lib/components/RecruitPanel.svelte'
-  import Codex from './lib/components/Codex.svelte'
-  import EventToast from './lib/components/EventToast.svelte'
-
-  function handleCloudSync() {
-    bridge.send({ type: 'ui:enable-cloud-sync' })
-  }
-
-  // Track previous state for event detection
-  let prevGlitchCount = -1
-  let prevBuildingCount = -1
-  let prevProxyCount = -1
-
-  // Detect colony changes and push events
-  $: {
-    const glitchCount = $colony.glitches.length
-    const buildingCount = $colony.buildings.length
-    const proxyCount = $colony.proxies.length
-
-    if (prevGlitchCount >= 0) {
-      if (glitchCount > prevGlitchCount) {
-        const newGlitch = $colony.glitches[$colony.glitches.length - 1]
-        if (newGlitch) {
-          pushEvent(`${newGlitch.type.replace(/_/g, ' ')} spawned!`, 'danger')
-        }
-      }
-      if (buildingCount > prevBuildingCount) {
-        const newBuilding = $colony.buildings[$colony.buildings.length - 1]
-        if (newBuilding) {
-          pushEvent(`${newBuilding.buildingId.replace(/_/g, ' ')} built`, 'success')
-        }
-      }
-      if (proxyCount > prevProxyCount) {
-        pushEvent('New proxy recruited', 'info')
-      }
-    }
-
-    prevGlitchCount = glitchCount
-    prevBuildingCount = buildingCount
-    prevProxyCount = proxyCount
-  }
+  import { initWorldStore, worldSnapshot } from './lib/stores/world-store'
+  import { initCloudSyncStore } from './lib/stores/cloud-sync'
+  import { initThemeStore, theme } from './lib/theme/theme-store'
+  import GameCanvas from './lib/components/GameCanvas.svelte'
 
   onMount(() => {
+    initThemeStore()
     bridge.init()
-    initGameStore()
+    initWorldStore()
     initCloudSyncStore()
   })
 </script>
 
-<main class="idle-vibes">
-  <EventToast />
-  <VibeMeter />
-  <ResourceBar />
-  <ColonyCanvas />
-
-  <div class="controls">
-    <ProxyList />
-    <GlitchList />
-    <BuildPanel />
-    <RecruitPanel />
-  </div>
-
-  <div class="toolbar">
-    <button class="toolbar-btn" on:click={() => codexOpen.set(true)}>[CODEX]</button>
-    {#if $cloudSync.authenticated}
-      <span class="cloud-status" title="Signed in as {$cloudSync.username}">[SYNC: {$cloudSync.username}]</span>
+<main class="descent" data-theme-kind={$theme.kind}>
+  <header class="top">
+    <span class="title">IDLE_VIBES: THE DESCENT</span>
+    {#if $worldSnapshot}
+      <span class="build">run #{$worldSnapshot.run.prestigeCount + 1}</span>
     {:else}
-      <button class="toolbar-btn cloud-btn" on:click={handleCloudSync}>[CLOUD SYNC]</button>
+      <span class="build muted">booting…</span>
     {/if}
-    {#if $colony.standbyActive}
-      <span class="standby-indicator">[STANDBY]</span>
-    {/if}
-  </div>
+  </header>
 
-  <Codex />
+  {#if $worldSnapshot}
+    <section class="hud">
+      <span class="res res-tokens">◆ {$worldSnapshot.resources.tokens}</span>
+      <span class="res res-focus">✦ {$worldSnapshot.resources.focus}</span>
+      <span class="res res-shards">◈ {$worldSnapshot.resources.shards}</span>
+    </section>
+  {/if}
+
+  <GameCanvas />
+
+  <footer class="bottom">
+    <span>the stack grows beneath you</span>
+  </footer>
 </main>
 
 <style>
   :global(body) {
     margin: 0;
     padding: 0;
-    background: #0a0a1a;
-    color: #cccccc;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    overflow-x: hidden;
+    background: var(--vscode-editor-background, #1e1e1e);
+    color: var(--vscode-editor-foreground, #d4d4d4);
+    font-family: var(--vscode-editor-font-family, 'JetBrains Mono', 'Fira Code', monospace);
+    font-size: var(--vscode-editor-font-size, 12px);
+    overflow: hidden;
   }
 
   :global(*) {
     box-sizing: border-box;
   }
 
-  .idle-vibes {
+  .descent {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    overflow-y: auto;
-    position: relative;
+    background: var(--vscode-editor-background, #1e1e1e);
+    color: var(--vscode-editor-foreground, #d4d4d4);
   }
 
-  .controls {
-    flex: 1;
-  }
-
-  .toolbar {
+  .top {
     display: flex;
-    gap: 8px;
-    padding: 6px 8px;
-    border-top: 1px solid #1a1a2e;
+    justify-content: space-between;
     align-items: center;
-  }
-
-  .toolbar-btn {
-    background: none;
-    border: 1px solid #1a1a2e;
-    color: #00aaff;
-    font-family: inherit;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--vscode-panel-border, #333);
     font-size: 10px;
-    padding: 3px 8px;
-    cursor: pointer;
-    transition: border-color 0.2s ease, color 0.2s ease;
+    color: var(--vscode-descriptionForeground, #888);
+    flex: 0 0 auto;
   }
 
-  .toolbar-btn:hover {
-    border-color: #00aaff;
+  .title {
+    letter-spacing: 1px;
+    color: var(--vscode-editor-foreground, #d4d4d4);
   }
 
-  .toolbar-btn:active {
-    transform: scale(0.95);
+  .muted {
+    opacity: 0.5;
   }
 
-  .cloud-status {
-    color: #00cc66;
-    font-size: 10px;
+  .hud {
+    display: flex;
+    justify-content: space-around;
+    padding: 4px 10px;
+    border-bottom: 1px solid var(--vscode-panel-border, #333);
+    font-size: 11px;
+    flex: 0 0 auto;
   }
 
-  .cloud-btn {
-    color: #aa88ff;
-  }
+  .res-tokens { color: var(--vscode-charts-blue, #4daafc); }
+  .res-focus { color: var(--vscode-charts-orange, #ff8c00); }
+  .res-shards { color: var(--vscode-charts-purple, #b180d7); }
 
-  .cloud-btn:hover {
-    border-color: #aa88ff;
-  }
-
-  .standby-indicator {
-    color: #666;
-    font-size: 10px;
-    animation: blink 2s infinite;
-  }
-
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
+  .bottom {
+    padding: 6px 10px;
+    border-top: 1px solid var(--vscode-panel-border, #333);
+    font-size: 9px;
+    color: var(--vscode-descriptionForeground, #666);
+    text-align: center;
+    flex: 0 0 auto;
   }
 </style>

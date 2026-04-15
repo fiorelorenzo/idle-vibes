@@ -1,14 +1,11 @@
 import * as vscode from 'vscode'
-import type { GameState, PrestigeData } from '@idle-vibes/shared'
+import type { WorldSnapshot } from '@idle-vibes/shared'
 import { GitHubAuth, type GitHubIdentity } from './github-auth'
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
 
 export interface CloudSavePayload {
-  colony: GameState['colony']
-  prestige: PrestigeData
-  totalXp: number
-  awakened: boolean
+  snapshot: WorldSnapshot
   savedAt: number
 }
 
@@ -21,8 +18,9 @@ export interface SyncStatus {
 }
 
 /**
- * Handles cloud save/load via the Cloudflare Worker API.
- * Sync is opt-in and runs on a 5-minute timer.
+ * Cloud save/load via the Cloudflare Worker API. Opt-in, 5-minute timer.
+ * Phase 0 scope: integration points exist but aren't yet wired to the
+ * GameCoordinator — that happens in Phase 7 alongside the new prestige flow.
  */
 export class CloudSyncService implements vscode.Disposable {
   readonly auth: GitHubAuth
@@ -38,7 +36,6 @@ export class CloudSyncService implements vscode.Disposable {
   private readonly _onSyncError = new vscode.EventEmitter<string>()
   readonly onSyncError = this._onSyncError.event
 
-  /** Incremented by the game engine to track sync count in perf stats */
   syncCount = 0
 
   constructor(apiUrl: string) {
@@ -47,7 +44,6 @@ export class CloudSyncService implements vscode.Disposable {
     this.disposables.push(this.auth, this._onDidSync, this._onSyncError)
   }
 
-  /** Enable cloud sync: authenticate and start the sync timer. */
   async enable(): Promise<boolean> {
     const identity = await this.auth.tryRestore() ?? await this.auth.signIn()
     if (!identity) return false
@@ -55,21 +51,16 @@ export class CloudSyncService implements vscode.Disposable {
     return true
   }
 
-  /** Disable cloud sync: stop timer (does not sign out). */
   disable(): void {
     this.stopTimer()
   }
 
-  /** Upload the current game state to the cloud. */
-  async save(state: GameState): Promise<boolean> {
+  async save(snapshot: WorldSnapshot): Promise<boolean> {
     const token = this.auth.getToken()
     if (!token) return false
 
     const payload: CloudSavePayload = {
-      colony: state.colony,
-      prestige: state.prestige,
-      totalXp: state.totalXp,
-      awakened: state.awakened,
+      snapshot,
       savedAt: Date.now(),
     }
 
@@ -101,7 +92,6 @@ export class CloudSyncService implements vscode.Disposable {
     }
   }
 
-  /** Load game state from the cloud. Returns null if no save exists. */
   async load(): Promise<CloudSavePayload | null> {
     const token = this.auth.getToken()
     if (!token) return null
@@ -137,7 +127,7 @@ export class CloudSyncService implements vscode.Disposable {
   private startTimer(): void {
     this.stopTimer()
     this.syncTimer = setInterval(() => {
-      this._onDidSync.fire() // GameEngine listens and calls save()
+      this._onDidSync.fire()
     }, SYNC_INTERVAL_MS)
   }
 
