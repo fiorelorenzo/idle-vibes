@@ -4,6 +4,7 @@ import { spawnMote } from '../prefabs/mote'
 import { spawnGlitch } from '../prefabs/glitch'
 import { spawnBoss } from '../prefabs/boss'
 import { rand } from '../util/rng'
+import { sfx } from '../../audio/synth'
 
 /**
  * Drains host-queued GameEvents and turns them into ECS state changes
@@ -56,6 +57,7 @@ function handle(world: EcsWorld, event: GameEvent): void {
         text: `+${event.count} shard${event.count === 1 ? '' : 's'}`,
         eventKind: 'shard_pop',
       })
+      sfx.shardPop()
       break
     case 'heal_pulse':
       world.pendingLogs.push({
@@ -94,6 +96,7 @@ function handle(world: EcsWorld, event: GameEvent): void {
         text: `${event.count}× ${event.glitchType.replace('_', ' ')} (${event.reason})`,
         eventKind: 'glitch_spawn',
       })
+      sfx.glitchSpawn()
       break
     }
     case 'phase_change':
@@ -142,6 +145,7 @@ function handle(world: EcsWorld, event: GameEvent): void {
         text: `// a Watcher rises from ${event.layer}`,
         eventKind: 'boss_spawn',
       })
+      sfx.bossSpawn()
       break
     }
     case 'boss_defeated':
@@ -153,6 +157,7 @@ function handle(world: EcsWorld, event: GameEvent): void {
         text: `the ${event.layer} watcher falls`,
         eventKind: 'boss_defeated',
       })
+      sfx.bossDown()
       break
     default:
       break

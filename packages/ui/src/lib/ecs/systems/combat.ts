@@ -19,6 +19,7 @@ import {
 import type { EcsWorld } from '../world'
 import { killEntity } from '../world'
 import { spawnFloatingText } from '../prefabs/floating-text'
+import { sfx } from '../../audio/synth'
 
 const wardenQuery = defineQuery([Kin, KinType, Attack, Aggro, AIState, Position, GridPos, PathTarget])
 const glitchQuery = defineQuery([GlitchTag, Health, Position, GridPos, PathTarget, AIState])
@@ -99,6 +100,7 @@ export function combatSystem(world: EcsWorld): void {
         `-${Math.floor(Attack.dmg[w])}`,
         world.pixi.themeInts.errorForeground,
       )
+      sfx.glitchHit()
       if (Health.hp[target] <= 0) {
         onGlitchDeath(world, target)
         Aggro.target[w] = 0

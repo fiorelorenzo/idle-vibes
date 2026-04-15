@@ -1,5 +1,5 @@
 import { addComponent, addEntity } from 'bitecs'
-import { Container, Graphics, Text } from 'pixi.js'
+import { Container, Graphics } from 'pixi.js'
 import {
   Position,
   PreviousPosition,
@@ -8,12 +8,14 @@ import {
   SpriteRef,
 } from '../components'
 import type { EcsWorld } from '../world'
+import { renderBitmapText, measureBitmapText } from '../../render/bitmap-font'
 
 const FT_LIFE = 1.0
 
 /**
- * A floating "+N TOK" style popup above a world position. Uses a Pixi Text
- * (DOM-free, rendered via the canvas). Life 1s, rises, fades.
+ * A floating "+N TOK" style popup above a world position. Uses the
+ * pixel bitmap font — no texture atlas, no DOM text, crisp at any
+ * zoom level, matches the Kin sprite aesthetic.
  */
 export function spawnFloatingText(
   world: EcsWorld,
@@ -42,20 +44,14 @@ export function spawnFloatingText(
   SpriteRef.frame[eid] = 0
 
   const container = new Container()
-  const label = new Text({
-    text,
-    style: {
-      fontFamily: 'monospace',
-      fontSize: 8,
-      fill: tint,
-      fontWeight: 'bold',
-    },
-  })
-  label.anchor.set(0.5, 0.5)
-  label.resolution = 2
+  const label = renderBitmapText(text, tint)
+
+  // Tiny dark background for contrast.
+  const { width, height } = measureBitmapText(text)
   const bg = new Graphics()
-  bg.rect(-label.width / 2 - 1, -label.height / 2 - 1, label.width + 2, label.height + 2)
-  bg.fill({ color: 0x000000, alpha: 0.25 })
+  bg.rect(-width / 2 - 1, -height / 2 - 1, width + 2, height + 2)
+  bg.fill({ color: 0x000000, alpha: 0.4 })
+
   container.addChild(bg, label)
   container.x = x
   container.y = y

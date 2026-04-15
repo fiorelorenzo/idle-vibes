@@ -17,6 +17,7 @@ import {
 import type { EcsWorld } from '../world'
 import { killEntity } from '../world'
 import { spawnFloatingText } from '../prefabs/floating-text'
+import { sfx } from '../../audio/synth'
 import { TILE_SIZE } from '../../render/tiles'
 import { addComponent } from 'bitecs'
 
@@ -144,6 +145,7 @@ function deliverMote(world: EcsWorld, scribe: number, mote: number): void {
   const x = Position.x[scribe]
   const y = Position.y[scribe] - 8
   spawnFloatingText(world, x, y, `+${value} tok`, world.pixi.themeInts.chartsBlue)
+  sfx.moteDeliver()
 
   killEntity(world, mote)
   Carrying.eid[scribe] = 0
