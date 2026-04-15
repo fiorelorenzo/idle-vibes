@@ -32,6 +32,10 @@ export class LocalStateStorage {
         // Schema mismatch: discard. A migration step would live here in the future.
         return null
       }
+      // Defensive: ensure optional collections exist even if the persisted
+      // blob predates a schema field.
+      if (!parsed.buildings) parsed.buildings = []
+      if (!parsed.expeditions) parsed.expeditions = []
       return parsed
     } catch {
       return null

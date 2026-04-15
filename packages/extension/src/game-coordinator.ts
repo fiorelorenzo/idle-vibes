@@ -182,7 +182,9 @@ export class GameCoordinator {
       event.kind === 'expedition_return' ||
       event.kind === 'platform_grow' ||
       event.kind === 'boss_defeated' ||
-      event.kind === 'phase_change'
+      event.kind === 'phase_change' ||
+      event.kind === 'building_placed' ||
+      event.kind === 'kin_spawn'
     ) {
       this.sendSnapshot()
     }

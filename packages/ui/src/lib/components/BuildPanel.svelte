@@ -4,23 +4,25 @@
   import { BUILDING_DEFS } from '@idle-vibes/shared'
   import type { BuildingKind } from '@idle-vibes/shared'
 
+  // Reactive derived values so affordability updates as tokens change.
+  $: tokens = $worldSnapshot?.resources.tokens ?? 0
+  $: buildings = $worldSnapshot?.buildings ?? []
+
   /**
-   * Places buildings on the Surface layer at the next free tile next to
-   * the Core. In v1 placement is automatic (no click-on-tile targeting);
-   * the coordinator rejects overlaps so repeated clicks queue different
-   * tiles around the ring.
+   * Ring of placement tiles around the Core (10,3). The panel auto-
+   * picks the next unoccupied slot on each click. v1 has no click-on-
+   * tile targeting.
    */
   const FREE_TILES: Array<[number, number]> = [
-    [7, 5], [13, 5],
-    [6, 7], [14, 7],
-    [7, 9], [13, 9],
-    [5, 6], [15, 6],
+    [6, 5],  [14, 5],
+    [5, 7],  [15, 7],
+    [6, 9],  [14, 9],
+    [7, 11], [13, 11],
+    [5, 11], [15, 11],
   ]
 
   function nextFreeTile(): [number, number] | null {
-    const occupied = new Set(
-      ($worldSnapshot?.buildings ?? []).map((b) => `${b.gx},${b.gy}`),
-    )
+    const occupied = new Set(buildings.map((b) => `${b.gx},${b.gy}`))
     for (const [x, y] of FREE_TILES) {
       if (!occupied.has(`${x},${y}`)) return [x, y]
     }
@@ -28,6 +30,9 @@
   }
 
   function build(kind: BuildingKind): void {
+    const def = BUILDING_DEFS.find((b) => b.id === kind)
+    if (!def) return
+    if (tokens < def.cost) return
     const spot = nextFreeTile()
     if (!spot) return
     bridge.send({
@@ -41,26 +46,27 @@
       },
     })
   }
-
-  function tokensHave(): number {
-    return $worldSnapshot?.resources.tokens ?? 0
-  }
 </script>
 
 <section class="build-panel">
-  <span class="label" title="Place new buildings to grow the colony. Each button consumes Tokens. Buildings persist for the current run.">BUILD</span>
+  <span
+    class="label"
+    title="Place new buildings to grow the colony. Each button consumes Tokens. Buildings persist for the current run."
+  >BUILD</span>
   <div class="grid">
     {#each BUILDING_DEFS as def}
-      {@const affordable = tokensHave() >= def.cost}
+      {@const affordable = tokens >= def.cost}
+      {@const owned = buildings.filter((b) => b.kind === def.id).length}
       <button
+        type="button"
         class="bld"
         class:disabled={!affordable}
         disabled={!affordable}
         on:click={() => build(def.id)}
-        title={`${def.name} — ${def.description} Cost: ${def.cost} tokens.`}
+        title={`${def.name} — ${def.description} Cost: ${def.cost} tokens. Owned: ${owned}.`}
       >
         <span class="name">{def.name}</span>
-        <span class="cost">{def.cost}◆</span>
+        <span class="cost">{def.cost}◆{owned > 0 ? ` · ${owned}` : ''}</span>
       </button>
     {/each}
   </div>

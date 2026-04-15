@@ -1,5 +1,4 @@
 import type { EcsWorld } from '../world'
-import { aiWanderSystem } from './ai-wander'
 import { pathfindingSystem } from './pathfinding'
 import { movementSystem } from './movement'
 import { animationSystem } from './animation'
@@ -26,7 +25,6 @@ export function runSimulationTick(world: EcsWorld, dt: number): void {
 
   eventIngestSystem(world)
   aiBehaviorSystem(world)
-  aiWanderSystem(world)
   carrySystem(world)
   pathfindingSystem(world)
   movementSystem(world)

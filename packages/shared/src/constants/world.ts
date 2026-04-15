@@ -1,6 +1,6 @@
 import type { LayerId } from '../types/world.js'
 
-export const WORLD_SCHEMA_VERSION = 1
+export const WORLD_SCHEMA_VERSION = 2
 
 /** Tile grid width (columns) — constant across layers */
 export const GRID_WIDTH = 20
