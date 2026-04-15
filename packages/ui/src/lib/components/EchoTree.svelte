@@ -30,11 +30,30 @@
   $: foundations = ECHO_NODE_DEFS.filter((n) => n.category === 'foundations')
   $: unlocks = ECHO_NODE_DEFS.filter((n) => n.category === 'unlocks')
   $: mutations = ECHO_NODE_DEFS.filter((n) => n.category === 'mutations')
+
+  function onKeydown(e: KeyboardEvent): void {
+    if (open && e.key === 'Escape') open = false
+  }
+
+  function onBackdropClick(e: MouseEvent): void {
+    if (e.target === e.currentTarget) open = false
+  }
 </script>
 
+<svelte:window on:keydown={onKeydown} />
+
 {#if open}
-  <div class="overlay" on:click={() => (open = false)}>
-    <div class="panel" on:click|stopPropagation>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Echo Tree"
+    tabindex="-1"
+    on:click={onBackdropClick}
+  >
+    <div class="panel">
       <header>
         <span>ECHO TREE · {$worldSnapshot?.meta.echoes ?? 0} echoes</span>
         <button class="close" on:click={() => (open = false)}>×</button>
