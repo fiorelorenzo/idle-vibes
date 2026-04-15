@@ -10,20 +10,25 @@ leaderboards.get('/:metric', async (c) => {
 
   let query: string
   switch (metric) {
-    case 'xp':
-      query = 'SELECT username, avatar_url, total_xp AS score FROM profiles ORDER BY total_xp DESC LIMIT ?'
+    case 'echoes':
+      query = 'SELECT username, avatar_url, echoes AS score FROM profiles ORDER BY echoes DESC LIMIT ?'
       break
     case 'prestige':
+      query = 'SELECT username, avatar_url, total_prestiges AS score FROM profiles ORDER BY total_prestiges DESC LIMIT ?'
+      break
+    case 'depth':
       query = `
-        SELECT p.username, p.avatar_url,
-          json_extract(cs.prestige_data, '$.prestigeCount') AS score
-        FROM profiles p
-        JOIN colony_state cs ON cs.github_user_id = p.github_user_id
+        SELECT username, avatar_url,
+          CASE deepest_layer
+            WHEN 'main' THEN 4
+            WHEN 'abyss' THEN 3
+            WHEN 'deep' THEN 2
+            WHEN 'shallow' THEN 1
+            ELSE 0
+          END AS score
+        FROM profiles
         ORDER BY score DESC LIMIT ?
       `
-      break
-    case 'shards':
-      query = 'SELECT username, avatar_url, aria_shards AS score FROM profiles ORDER BY aria_shards DESC LIMIT ?'
       break
     default:
       return c.json({ error: `Unknown metric: ${metric}` }, 400)

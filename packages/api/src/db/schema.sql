@@ -1,22 +1,23 @@
--- idle_vibes D1 schema
--- Adapted from the original Supabase migration.
--- Primary key is github_user_id (text) from GitHub OAuth.
+-- idle_vibes D1 schema (The Descent rewrite)
+-- One row per user; the entire WorldSnapshot is persisted as a single
+-- JSON blob in `snapshot_data`. Summary fields on `profiles` are
+-- maintained by the saves route for cheap leaderboard queries.
 
 CREATE TABLE IF NOT EXISTS profiles (
-  github_user_id TEXT PRIMARY KEY,
-  username       TEXT UNIQUE NOT NULL,
-  avatar_url     TEXT,
-  total_xp       INTEGER NOT NULL DEFAULT 0,
-  aria_shards    INTEGER NOT NULL DEFAULT 0,
-  awakened       INTEGER NOT NULL DEFAULT 0,
-  created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+  github_user_id    TEXT PRIMARY KEY,
+  username          TEXT UNIQUE NOT NULL,
+  avatar_url        TEXT,
+  echoes            INTEGER NOT NULL DEFAULT 0,  -- prestige currency
+  total_prestiges   INTEGER NOT NULL DEFAULT 0,
+  deepest_layer     TEXT NOT NULL DEFAULT 'surface',
+  awakened          INTEGER NOT NULL DEFAULT 0,
+  created_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS colony_state (
   github_user_id TEXT PRIMARY KEY REFERENCES profiles(github_user_id),
   saved_at       TEXT NOT NULL DEFAULT (datetime('now')),
-  colony_data    TEXT NOT NULL,  -- JSON blob
-  prestige_data  TEXT NOT NULL   -- JSON blob
+  snapshot_data  TEXT NOT NULL   -- JSON blob: the full WorldSnapshot
 );
 
 CREATE TABLE IF NOT EXISTS market_listings (

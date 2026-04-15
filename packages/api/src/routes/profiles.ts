@@ -17,8 +17,9 @@ profiles.get('/me', async (c) => {
       github_user_id: userId,
       username: user.login,
       avatar_url: user.avatar_url,
-      total_xp: 0,
-      aria_shards: 0,
+      echoes: 0,
+      total_prestiges: 0,
+      deepest_layer: 'surface',
       awakened: false,
     })
   }
@@ -31,7 +32,7 @@ profiles.get('/:id', async (c) => {
   const id = c.req.param('id')
 
   const row = await c.env.DB.prepare(
-    'SELECT github_user_id, username, avatar_url, total_xp, awakened FROM profiles WHERE github_user_id = ?',
+    'SELECT github_user_id, username, avatar_url, echoes, total_prestiges, deepest_layer, awakened FROM profiles WHERE github_user_id = ?',
   ).bind(id).first()
 
   if (!row) return c.json({ error: 'Profile not found' }, 404)
