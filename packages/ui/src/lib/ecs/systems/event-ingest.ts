@@ -6,7 +6,8 @@ import { spawnBoss } from '../prefabs/boss'
 import { spawnScribe } from '../prefabs/scribe'
 import { spawnWarden } from '../prefabs/warden'
 import { spawnDelver } from '../prefabs/delver'
-import { spawnBuilding } from '../prefabs/building'
+import { spawnBlueprint } from '../prefabs/building'
+import { onExpeditionStart, onExpeditionReturn } from './expedition-visuals'
 import { rand } from '../util/rng'
 import { sfx } from '../../audio/synth'
 
@@ -154,13 +155,44 @@ function handle(world: EcsWorld, event: GameEvent): void {
       break
     }
     case 'building_placed':
-      spawnBuilding(world, event.buildingKind, event.gx, event.gy)
+      spawnBlueprint(world, event.buildingKind, event.gx, event.gy, event.buildingId)
       world.pendingLogs.push({
         id: `build-${world.tick}`,
         ts: Date.now(),
-        severity: 'success',
-        text: `${event.buildingKind} built`,
+        severity: 'info',
+        text: `blueprint · ${event.buildingKind}`,
         eventKind: 'building_placed',
+      })
+      break
+    case 'building_completed':
+      world.pendingLogs.push({
+        id: `bcomp-${world.tick}`,
+        ts: Date.now(),
+        severity: 'success',
+        text: `construction complete`,
+        eventKind: 'building_completed',
+      })
+      break
+    case 'expedition_start':
+      onExpeditionStart(world, event.expeditionId)
+      world.pendingLogs.push({
+        id: `exp-start-${world.tick}`,
+        ts: Date.now(),
+        severity: 'info',
+        text: `delver → ${event.targetLayer}`,
+        eventKind: 'expedition_start',
+      })
+      break
+    case 'expedition_return':
+      onExpeditionReturn(world, event.expeditionId)
+      world.pendingLogs.push({
+        id: `exp-ret-${world.tick}`,
+        ts: Date.now(),
+        severity: event.success ? 'success' : 'warning',
+        text: event.success
+          ? `expedition returned · +${event.loot.shards}◈`
+          : 'expedition failed',
+        eventKind: 'expedition_return',
       })
       break
     case 'boss_spawn': {

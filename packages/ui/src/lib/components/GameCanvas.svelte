@@ -10,7 +10,7 @@
   import { spawnWarden } from '../ecs/prefabs/warden'
   import { spawnDelver } from '../ecs/prefabs/delver'
   import { spawnCore } from '../ecs/prefabs/core'
-  import { spawnBuilding } from '../ecs/prefabs/building'
+  import { spawnActiveBuilding, spawnBlueprint } from '../ecs/prefabs/building'
   import { worldSnapshot } from '../stores/world-store'
   import { cameraTarget } from '../stores/camera-store'
   import { theme } from '../theme/theme-store'
@@ -73,9 +73,13 @@
     spawnDelver(runtime.world, 10, 6)
 
     // Re-hydrate any buildings persisted in the snapshot so they show
-    // up after reload.
+    // up after reload. Blueprints re-enter construction mode.
     for (const b of snapshot.buildings) {
-      spawnBuilding(runtime.world, b.kind, b.gx, b.gy)
+      if (b.status === 'blueprint') {
+        spawnBlueprint(runtime.world, b.kind, b.gx, b.gy, b.id)
+      } else {
+        spawnActiveBuilding(runtime.world, b.kind, b.gx, b.gy, b.id)
+      }
     }
 
     // Configure camera bounds from the rendered map height.

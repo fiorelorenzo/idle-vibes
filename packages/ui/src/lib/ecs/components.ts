@@ -96,6 +96,16 @@ export const BuildingProduction = defineComponent({
   interval: Types.f32,
   timer: Types.f32,
 })
+export const BlueprintTag = defineComponent()
+export const BuildingProgress = defineComponent({
+  progress: Types.f32,
+  workers: Types.ui8,
+})
+export const BuilderTask = defineComponent({
+  targetEid: Types.ui32,
+})
+/** Ephemeral flag: the entity is currently away on an expedition. */
+export const InExpeditionTag = defineComponent()
 
 // ── enums (plain TS — bitECS stores numeric codes) ──────────────────
 export const KIN = {

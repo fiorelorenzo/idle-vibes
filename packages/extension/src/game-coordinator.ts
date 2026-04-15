@@ -293,7 +293,6 @@ export class GameCoordinator {
         const def = BUILDING_DEFS.find((d) => d.id === mutation.buildingKind)
         if (!def) break
         if (this.snapshot.resources.tokens < def.cost) break
-        // Reject overlap on same tile.
         const clash = this.snapshot.buildings.find(
           (b) => b.layer === mutation.layer && b.gx === mutation.gx && b.gy === mutation.gy,
         )
@@ -306,6 +305,8 @@ export class GameCoordinator {
           gx: mutation.gx,
           gy: mutation.gy,
           placedAt: Date.now(),
+          status: 'blueprint' as const,
+          progress: 0,
         }
         this.snapshot.buildings.push(building)
         this.emitEvent({
@@ -314,6 +315,34 @@ export class GameCoordinator {
           gx: mutation.gx,
           gy: mutation.gy,
           layer: mutation.layer,
+          buildingId: building.id,
+        })
+        break
+      }
+      case 'building_progress': {
+        const b = this.snapshot.buildings.find((x) => x.id === mutation.buildingId)
+        if (!b || b.status !== 'blueprint') break
+        b.progress = Math.min(1, b.progress + mutation.delta)
+        break
+      }
+      case 'complete_building': {
+        const b = this.snapshot.buildings.find((x) => x.id === mutation.buildingId)
+        if (!b || b.status !== 'blueprint') break
+        b.status = 'active'
+        b.progress = 1
+        this.emitEvent({ kind: 'building_completed', buildingId: b.id })
+        break
+      }
+      case 'recruit_kin': {
+        const cost = recruitCost(mutation.kinKind, this.snapshot.buildings.length)
+        if (this.snapshot.resources.tokens < cost) break
+        this.snapshot.resources.tokens -= cost
+        this.emitEvent({
+          kind: 'kin_spawn',
+          kinKind: mutation.kinKind,
+          gx: 10,
+          gy: 5,
+          layer: 'surface',
         })
         break
       }
@@ -371,6 +400,11 @@ export class GameCoordinator {
       this.persist()
     }
   }
+}
+
+export function recruitCost(kind: 'scribe' | 'warden' | 'delver', colonySize: number): number {
+  const base = kind === 'scribe' ? 8 : kind === 'warden' ? 20 : 35
+  return Math.floor(base * Math.pow(1.12, colonySize))
 }
 
 function createDefaultSnapshot(): WorldSnapshot {

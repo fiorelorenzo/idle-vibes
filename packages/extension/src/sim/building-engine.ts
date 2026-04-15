@@ -34,6 +34,7 @@ export class BuildingEngine {
   private tick(dt: number): void {
     if (!this.snapshot) return
     for (const building of this.snapshot.buildings) {
+      if (building.status !== 'active') continue
       const def = BUILDING_DEFS.find((b) => b.id === building.kind)
       if (!def || def.productionIntervalSec <= 0) continue
       const acc = (this.timers.get(building.id) ?? 0) + dt

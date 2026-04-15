@@ -9,6 +9,7 @@
   import EventFeed from './lib/components/EventFeed.svelte'
   import ExpeditionPanel from './lib/components/ExpeditionPanel.svelte'
   import BuildPanel from './lib/components/BuildPanel.svelte'
+  import RecruitPanel from './lib/components/RecruitPanel.svelte'
   import CommandBar from './lib/components/CommandBar.svelte'
   import PrestigeButton from './lib/components/PrestigeButton.svelte'
   import DescendButton from './lib/components/DescendButton.svelte'
@@ -64,6 +65,7 @@
     <EventFeed />
   </div>
 
+  <RecruitPanel />
   <BuildPanel />
   <ExpeditionPanel />
   <RelicTray />

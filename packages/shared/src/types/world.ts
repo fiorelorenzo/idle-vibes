@@ -22,6 +22,7 @@ export interface LayerState {
 }
 
 export type BuildingKind = 'loom' | 'barracks' | 'well' | 'gate'
+export type BuildingStatus = 'blueprint' | 'active'
 
 export interface BuildingState {
   id: string
@@ -30,6 +31,9 @@ export interface BuildingState {
   gx: number
   gy: number
   placedAt: number
+  status: BuildingStatus
+  /** 0..1 — construction progress while status is 'blueprint' */
+  progress: number
 }
 
 export interface ExpeditionState {
@@ -150,3 +154,6 @@ export type WorldMutation =
   | { kind: 'pick_modifier'; modifierId: string | null }
   | { kind: 'request_boss_spawn'; layer: LayerId }
   | { kind: 'place_building'; buildingKind: BuildingKind; layer: LayerId; gx: number; gy: number }
+  | { kind: 'building_progress'; buildingId: string; delta: number }
+  | { kind: 'complete_building'; buildingId: string }
+  | { kind: 'recruit_kin'; kinKind: 'scribe' | 'warden' | 'delver' }

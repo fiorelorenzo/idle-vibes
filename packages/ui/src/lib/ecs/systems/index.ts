@@ -1,5 +1,7 @@
 import type { EcsWorld } from '../world'
 import { pathfindingSystem } from './pathfinding'
+import { constructionSystem } from './construction'
+import { expeditionVisualSystem } from './expedition-visuals'
 import { movementSystem } from './movement'
 import { animationSystem } from './animation'
 import { lifetimeSystem } from './lifetime'
@@ -26,6 +28,8 @@ export function runSimulationTick(world: EcsWorld, dt: number): void {
   eventIngestSystem(world)
   aiBehaviorSystem(world)
   carrySystem(world)
+  constructionSystem(world)
+  expeditionVisualSystem(world)
   pathfindingSystem(world)
   movementSystem(world)
   moteFallSystem(world)
