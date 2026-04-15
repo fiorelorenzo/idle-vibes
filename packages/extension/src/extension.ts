@@ -32,7 +32,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const bridge = new ExtensionBridge()
   const storage = new LocalStateStorage(context.globalState)
-  void storage.cleanLegacy()
   const parser = new SmartParser()
   const coordinator = new GameCoordinator(bridge, storage)
   const theme = new ThemeBridge(bridge)
@@ -90,6 +89,10 @@ export function activate(context: vscode.ExtensionContext): void {
       await storage.cleanLegacy()
       coordinator.resetLocalState()
       vscode.window.showInformationMessage('[idle_vibes] local save wiped')
+    }),
+    vscode.commands.registerCommand('idleVibes.dev.wipeLegacySaves', async () => {
+      await storage.cleanLegacy()
+      vscode.window.showInformationMessage('[idle_vibes] legacy globalState keys dropped')
     }),
     vscode.commands.registerCommand('idleVibes.reloadWebview', () => {
       provider.reload()
