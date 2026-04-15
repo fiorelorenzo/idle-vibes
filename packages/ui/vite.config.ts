@@ -7,13 +7,17 @@ const EXTENSION_MEDIA = resolve(__dirname, '../extension/media')
 
 /**
  * Copies build output to the extension's media/ directory after each build.
- * In watch mode this runs on every rebuild, triggering the extension's
- * file watcher to auto-reload the webview.
+ *
+ * IMPORTANT: Rollup's `closeBundle` hook only fires ONCE — when the process
+ * exits. In Vite watch mode that means the copy never runs on rebuilds.
+ * We use `writeBundle` instead, which fires after every successful build
+ * in a watch iteration. The extension's file watcher (createFileSystemWatcher
+ * on media/assets/*.js) then triggers a debounced webview reload.
  */
 function copyToExtensionMedia() {
   return {
     name: 'copy-to-extension-media',
-    closeBundle() {
+    writeBundle() {
       try {
         rmSync(EXTENSION_MEDIA, { recursive: true, force: true })
         mkdirSync(EXTENSION_MEDIA, { recursive: true })
