@@ -22,21 +22,18 @@
 </script>
 
 <main class="descent">
-  <header class="top">
-    <span class="title">IDLE_VIBES :: DESCENT</span>
-    {#if $worldSnapshot}
-      <span class="phase">{$worldSnapshot.drama.phase}</span>
-      <span class="run">run #{$worldSnapshot.run.prestigeCount + 1}</span>
-    {:else}
-      <span class="run muted">booting…</span>
-    {/if}
-  </header>
-
   {#if $worldSnapshot}
     <section class="hud">
       <span class="res res-tokens">◆ {$worldSnapshot.resources.tokens}</span>
       <span class="res res-focus">✦ {$worldSnapshot.resources.focus}</span>
       <span class="res res-shards">◈ {$worldSnapshot.resources.shards}</span>
+      <span class="spacer"></span>
+      <span class="phase">{$worldSnapshot.drama.phase}</span>
+      <span class="run">#{$worldSnapshot.run.prestigeCount + 1}</span>
+    </section>
+  {:else}
+    <section class="hud">
+      <span class="run muted">booting…</span>
     </section>
   {/if}
 
@@ -77,33 +74,25 @@
     color: var(--vscode-editor-foreground, #d4d4d4);
   }
 
-  .top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 8px;
-    border-bottom: 1px solid var(--vscode-panel-border, #333);
-    font-size: 10px;
-    color: var(--vscode-descriptionForeground, #888);
-    flex: 0 0 auto;
-  }
-  .title { letter-spacing: 1px; color: var(--vscode-editor-foreground, #d4d4d4); }
-  .phase {
-    text-transform: uppercase;
-    color: var(--vscode-charts-orange, #ff8c00);
-    font-size: 9px;
-  }
-  .run { font-size: 9px; }
-  .muted { opacity: 0.5; }
-
   .hud {
     display: flex;
-    justify-content: space-around;
+    align-items: center;
+    gap: 10px;
     padding: 4px 8px;
     border-bottom: 1px solid var(--vscode-panel-border, #333);
     font-size: 11px;
     flex: 0 0 auto;
+    color: var(--vscode-descriptionForeground, #888);
   }
+  .hud .spacer { flex: 1 1 auto; }
+  .hud .phase {
+    text-transform: uppercase;
+    color: var(--vscode-charts-orange, #ff8c00);
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+  .hud .run { font-size: 9px; }
+  .muted { opacity: 0.5; }
   .res-tokens { color: var(--vscode-charts-blue, #4daafc); }
   .res-focus  { color: var(--vscode-charts-orange, #ff8c00); }
   .res-shards { color: var(--vscode-charts-purple, #b180d7); }
