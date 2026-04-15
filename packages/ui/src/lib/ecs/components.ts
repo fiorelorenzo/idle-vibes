@@ -88,6 +88,7 @@ export const Dead = defineComponent()
 export const Kin = defineComponent() // parent tag for all 4 Kin archetypes
 export const GlitchTag = defineComponent()
 export const MoteTag = defineComponent()
+export const BossTag = defineComponent()
 
 // ── enums (plain TS — bitECS stores numeric codes) ──────────────────
 export const KIN = {

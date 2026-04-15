@@ -136,3 +136,4 @@ export type WorldMutation =
   | { kind: 'equip_relic'; relicId: string; slot: number }
   | { kind: 'buy_echo_node'; nodeId: string; cost: number }
   | { kind: 'pick_modifier'; modifierId: string | null }
+  | { kind: 'request_boss_spawn'; layer: LayerId }

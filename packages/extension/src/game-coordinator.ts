@@ -266,6 +266,23 @@ export class GameCoordinator {
       case 'expedition_start':
         this.expeditions.start(mutation.delverId, mutation.targetLayer, mutation.durationMs)
         break
+      case 'expedition_resolve_choice':
+        this.expeditions.resolveChoice(mutation.expeditionId, mutation.choiceId, mutation.pickedA)
+        this.sendSnapshot()
+        break
+      case 'request_boss_spawn': {
+        const cost = (LAYER_INDEX[mutation.layer] ?? 0) * 10 + 10
+        if (this.snapshot.resources.shards < cost) break
+        this.snapshot.resources.shards -= cost
+        const movesetVariant = Math.floor(Math.random() * 3)
+        this.emitEvent({
+          kind: 'boss_spawn',
+          layer: mutation.layer,
+          bossId: `boss-${mutation.layer}-${Date.now()}`,
+          movesetVariant,
+        })
+        break
+      }
       default:
         break
     }

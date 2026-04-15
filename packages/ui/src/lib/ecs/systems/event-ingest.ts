@@ -2,6 +2,7 @@ import type { GameEvent } from '@idle-vibes/shared'
 import type { EcsWorld } from '../world'
 import { spawnMote } from '../prefabs/mote'
 import { spawnGlitch } from '../prefabs/glitch'
+import { spawnBoss } from '../prefabs/boss'
 import { rand } from '../util/rng'
 
 /**
@@ -130,6 +131,27 @@ function handle(world: EcsWorld, event: GameEvent): void {
         severity: 'info',
         text: `the stack grows · ${event.layer}`,
         eventKind: 'platform_grow',
+      })
+      break
+    case 'boss_spawn': {
+      spawnBoss(world, 10, 16, 150 + event.movesetVariant * 50)
+      world.pendingLogs.push({
+        id: `boss-${world.tick}`,
+        ts: Date.now(),
+        severity: 'danger',
+        text: `// a Watcher rises from ${event.layer}`,
+        eventKind: 'boss_spawn',
+      })
+      break
+    }
+    case 'boss_defeated':
+      world.pendingMutations.push({ kind: 'boss_defeated', layer: event.layer })
+      world.pendingLogs.push({
+        id: `bossdown-${world.tick}`,
+        ts: Date.now(),
+        severity: 'success',
+        text: `the ${event.layer} watcher falls`,
+        eventKind: 'boss_defeated',
       })
       break
     default:

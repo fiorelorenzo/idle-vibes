@@ -19,11 +19,23 @@
     })
   }
 
+  function resolveChoice(expeditionId: string, choiceId: string, pickedA: boolean): void {
+    bridge.send({
+      type: 'ui:world-mutation',
+      mutation: { kind: 'expedition_resolve_choice', expeditionId, choiceId, pickedA },
+    })
+  }
+
   function fmtTimeRemaining(startedAt: number, durationMs: number): string {
     const remainingMs = Math.max(0, startedAt + durationMs - Date.now())
     const s = Math.ceil(remainingMs / 1000)
     if (s < 60) return `${s}s`
     return `${Math.floor(s / 60)}m ${s % 60}s`
+  }
+
+  function fmtChoiceCountdown(autoResolveAt: number): string {
+    const s = Math.max(0, Math.ceil((autoResolveAt - Date.now()) / 1000))
+    return `${s}s`
   }
 
   let tick = 0
@@ -57,6 +69,19 @@
           {fmtTimeRemaining(exp.startedAt, exp.durationMs)}
         </span>
       </div>
+      {#each exp.pendingChoices as choice (choice.id)}
+        <div class="choice" data-tick={tick}>
+          <div class="choice-title">choice · {fmtChoiceCountdown(choice.autoResolveAt)}</div>
+          <div class="choice-buttons">
+            <button class="a" on:click={() => resolveChoice(exp.id, choice.id, true)}>
+              {choice.optionA.label}
+            </button>
+            <button class="b" on:click={() => resolveChoice(exp.id, choice.id, false)}>
+              {choice.optionB.label}
+            </button>
+          </div>
+        </div>
+      {/each}
     {/each}
     {#if ($worldSnapshot?.expeditions.length ?? 0) === 0}
       <div class="exp-empty">no delvers in the stack</div>
@@ -101,4 +126,28 @@
   .exp-id { color: var(--vscode-descriptionForeground, #888); flex: 0 0 40px; }
   .exp-remaining { color: var(--vscode-charts-orange, #ff8c00); }
   .exp-empty { font-size: 9px; font-style: italic; color: var(--vscode-descriptionForeground, #666); }
+
+  .choice {
+    margin: 2px 0 4px 10px;
+    padding: 3px 6px;
+    border: 1px solid var(--vscode-focusBorder, #007fd4);
+    background: rgba(0, 127, 212, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .choice-title {
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: var(--vscode-charts-blue, #4daafc);
+    text-transform: uppercase;
+  }
+  .choice-buttons { display: flex; gap: 4px; }
+  .choice-buttons button {
+    flex: 1;
+    font-size: 9px;
+    color: var(--vscode-editor-foreground, #d4d4d4);
+  }
+  .choice-buttons .a { color: var(--vscode-charts-orange, #ff8c00); }
+  .choice-buttons .b { color: var(--vscode-charts-green, #89d185); }
 </style>

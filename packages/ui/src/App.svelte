@@ -10,6 +10,7 @@
   import ExpeditionPanel from './lib/components/ExpeditionPanel.svelte'
   import CommandBar from './lib/components/CommandBar.svelte'
   import PrestigeButton from './lib/components/PrestigeButton.svelte'
+  import DescendButton from './lib/components/DescendButton.svelte'
   import RelicTray from './lib/components/RelicTray.svelte'
   import MetaToolbar from './lib/components/MetaToolbar.svelte'
   import TutorialOverlay from './lib/components/TutorialOverlay.svelte'
@@ -49,6 +50,7 @@
 
   <ExpeditionPanel />
   <RelicTray />
+  <DescendButton />
   <PrestigeButton />
   <CommandBar />
   <MetaToolbar />

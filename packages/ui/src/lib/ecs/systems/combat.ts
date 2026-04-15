@@ -5,6 +5,7 @@ import {
   Kin,
   KIN,
   GlitchTag,
+  BossTag,
   Health,
   Attack,
   Aggro,
@@ -124,8 +125,26 @@ function findNearestGlitch(glitches: Uint32Array | ReadonlyArray<number>, x: num
 }
 
 function onGlitchDeath(world: EcsWorld, g: number): void {
-  // Shard drop chance
-  if (Math.random() < 0.4) {
+  const isBoss = hasComponent(world, BossTag, g)
+  if (isBoss) {
+    world.pendingMutations.push({ kind: 'resource_delta', resource: 'shards', delta: 10 })
+    spawnFloatingText(
+      world,
+      Position.x[g],
+      Position.y[g] - 10,
+      '+10 ◈',
+      world.pixi.themeInts.chartsPurple,
+    )
+    world.pendingLogs.push({
+      id: `boss-kill-${world.tick}`,
+      ts: Date.now(),
+      severity: 'success',
+      text: '// watcher defeated',
+      eventKind: 'boss_defeated',
+    })
+    // Record deepest layer advance — the coordinator uses this for PrestigeButton visibility.
+    // We can't know the layer here, so leave the coordinator to infer from layersCleared.
+  } else if (Math.random() < 0.4) {
     world.pendingMutations.push({ kind: 'resource_delta', resource: 'shards', delta: 1 })
     spawnFloatingText(
       world,
