@@ -1,5 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js'
-import type { LayerId, WorldSnapshot, LayerState } from '@idle-vibes/shared'
+import type { LayerId, WorldSnapshot } from '@idle-vibes/shared'
 import { GRID_WIDTH, LAYER_DEFS } from '@idle-vibes/shared'
 import { TILE_SIZE } from './tiles'
 import type { ThemeInts } from '../theme/theme-store'
@@ -165,6 +165,3 @@ function addRgb(base: number, delta: number): number {
 function clamp255(v: number): number {
   return v < 0 ? 0 : v > 255 ? 255 : v
 }
-
-// Suppress unused import
-void LayerState
