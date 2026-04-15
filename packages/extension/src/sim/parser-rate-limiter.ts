@@ -1,6 +1,6 @@
 import type { ParserSignal, GameEvent } from '@idle-vibes/shared'
 import { RATE_LIMITS } from '@idle-vibes/shared'
-import type { ModifierEffects } from './modifier-engine'
+import type { RunEffects } from './effects-bus'
 
 /**
  * Converts raw parser signals into game events, applying rate limits so
@@ -24,9 +24,13 @@ export class ParserRateLimiter {
     this.spiritActive = false
   }
 
-  translate(signal: ParserSignal, effects?: ModifierEffects): GameEvent[] {
+  translate(signal: ParserSignal, effects?: RunEffects): GameEvent[] {
     const now = Date.now()
     const out: GameEvent[] = []
+
+    const flowCooldown = effects?.recursiveFlow
+      ? RATE_LIMITS.flowCascadeCooldownMs / 2
+      : RATE_LIMITS.flowCascadeCooldownMs
 
     switch (signal.type) {
       case 'ai_token_bundle': {
@@ -36,15 +40,18 @@ export class ParserRateLimiter {
           const count = clamp(Math.ceil(signal.value / 80), 2, 10)
           out.push({ kind: 'mote_rain', count, source: 'ai' })
         }
-        // Sustained AI activity: check for flow cascade
-        if (now - this.lastFlowCascadeAt >= RATE_LIMITS.flowCascadeCooldownMs) {
+        if (now - this.lastFlowCascadeAt >= flowCooldown) {
           this.lastFlowCascadeAt = now
           out.push({ kind: 'flow_cascade' })
         }
         break
       }
       case 'errors_decreased': {
-        out.push({ kind: 'focus_surge', amount: Math.max(1, signal.value) })
+        const focusMul = effects?.focusGainMul ?? 1
+        out.push({
+          kind: 'focus_surge',
+          amount: Math.max(1, Math.round(signal.value * focusMul)),
+        })
         break
       }
       case 'errors_increased': {
@@ -89,11 +96,18 @@ export class ParserRateLimiter {
         break
       }
       case 'git_commit': {
-        out.push({ kind: 'shard_pop', count: 1 })
+        const bonus = effects?.commitShardBonus ?? 0
+        out.push({ kind: 'shard_pop', count: 1 + bonus })
+        if (effects?.commitsAreFeats && !this.spiritActive) {
+          this.spiritActive = true
+          out.push({ kind: 'summon_spirit', durationMs: 60_000 })
+        }
         break
       }
       case 'git_commit_fix': {
         out.push({ kind: 'heal_pulse', amount: 10 })
+        const bonus = effects?.commitShardBonus ?? 0
+        if (bonus > 0) out.push({ kind: 'shard_pop', count: bonus })
         break
       }
       case 'git_commit_feat': {
@@ -101,7 +115,8 @@ export class ParserRateLimiter {
           this.spiritActive = true
           out.push({ kind: 'summon_spirit', durationMs: 60_000 })
         }
-        out.push({ kind: 'shard_pop', count: 2 })
+        const bonus = effects?.commitShardBonus ?? 0
+        out.push({ kind: 'shard_pop', count: 2 + bonus })
         break
       }
       case 'errors_unchanged':

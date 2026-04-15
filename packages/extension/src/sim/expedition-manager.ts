@@ -1,5 +1,6 @@
 import type { GameEvent, LayerId, ExpeditionState, WorldSnapshot, Loot } from '@idle-vibes/shared'
 import { EXPEDITION_MIN_FAIL_RATE, EXPEDITION_MAX_FAIL_RATE, LAYER_INDEX, LAYER_DEFS } from '@idle-vibes/shared'
+import type { RunEffects } from './effects-bus'
 
 /**
  * Host-side expedition lifecycle.
@@ -16,18 +17,30 @@ export class ExpeditionManager {
   private choiceTimers = new Map<string, ReturnType<typeof setTimeout>[]>()
   private emit: (e: GameEvent) => void = () => {}
   private snapshot: WorldSnapshot | null = null
+  private effectsProvider: () => RunEffects = () => ({}) as RunEffects
 
-  attach(snapshot: WorldSnapshot, emit: (e: GameEvent) => void): void {
+  attach(
+    snapshot: WorldSnapshot,
+    emit: (e: GameEvent) => void,
+    effectsProvider: () => RunEffects,
+  ): void {
     this.snapshot = snapshot
     this.emit = emit
-    // On boot, resume any persisted expeditions.
+    this.effectsProvider = effectsProvider
     for (const exp of snapshot.expeditions) {
       this.scheduleReturn(exp)
     }
   }
 
-  start(delverId: string, targetLayer: LayerId, durationMs: number): ExpeditionState | null {
+  start(delverId: string, targetLayer: LayerId, requestedDurationMs: number): ExpeditionState | null {
     if (!this.snapshot) return null
+
+    const effects = this.effectsProvider()
+    if (effects.expeditionDisabled) return null
+    if (!effects.doubleExpedition && this.snapshot.expeditions.length >= 1) return null
+    if (effects.doubleExpedition && this.snapshot.expeditions.length >= 2) return null
+
+    const durationMs = Math.max(5_000, Math.floor(requestedDurationMs * (effects.expeditionDurationMul ?? 1)))
 
     const id = `exp-${Date.now()}-${Math.floor(Math.random() * 9999)}`
     const expedition: ExpeditionState = {
@@ -67,14 +80,17 @@ export class ExpeditionManager {
     const exp = this.snapshot.expeditions[idx]
     this.snapshot.expeditions.splice(idx, 1)
 
-    const failRate = lerp(
+    const effects = this.effectsProvider()
+    const baseFailRate = lerp(
       EXPEDITION_MIN_FAIL_RATE,
       EXPEDITION_MAX_FAIL_RATE,
       (LAYER_INDEX[exp.targetLayer] ?? 0) / 4,
     )
+    const failRate = Math.max(0, Math.min(1, baseFailRate + (effects.expeditionFailDelta ?? 0)))
     const success = Math.random() > failRate
+    const lootBonus = (effects.shardGainMul ?? 1)
     const loot: Loot = success
-      ? rollLoot(exp.targetLayer)
+      ? rollLoot(exp.targetLayer, lootBonus)
       : { shards: 0, tokens: 0, focus: 0, relicId: null }
 
     // Credit loot to snapshot and record how deep the player has been.
@@ -113,15 +129,36 @@ export class ExpeditionManager {
   }
 }
 
-function rollLoot(layer: LayerId): Loot {
+function rollLoot(layer: LayerId, lootBonus = 1): Loot {
   const layerIdx = LAYER_INDEX[layer] ?? 0
-  const multiplier = 1 + layerIdx * 0.6
+  const multiplier = (1 + layerIdx * 0.6) * lootBonus
   return {
     shards: Math.floor(2 * multiplier + Math.random() * 4 * multiplier),
     tokens: Math.floor(3 * multiplier + Math.random() * 6 * multiplier),
     focus: Math.floor(1 * multiplier + Math.random() * 3),
-    relicId: Math.random() < 0.1 ? 'starter_token_lens' : null,
+    relicId: Math.random() < 0.15 ? randomRelicDrop() : null,
   }
+}
+
+const RELIC_DROP_POOL = [
+  'token_lens',
+  'delvers_compass',
+  'scribe_cloak',
+  'shard_pocket',
+  'warm_spark',
+  'boot_ration',
+  'steady_drum',
+  'warden_promise',
+  'commit_mirror',
+  'iron_patience',
+  'archivist_tome',
+  'focus_prism',
+  'crack_sealer',
+  'mote_magnet',
+]
+
+function randomRelicDrop(): string {
+  return RELIC_DROP_POOL[Math.floor(Math.random() * RELIC_DROP_POOL.length)]
 }
 
 function lerp(a: number, b: number, t: number): number {

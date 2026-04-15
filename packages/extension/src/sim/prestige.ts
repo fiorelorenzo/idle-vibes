@@ -6,6 +6,8 @@ import {
   LAYER_ROWS_AT_UNLOCK,
   GRID_WIDTH,
 } from '@idle-vibes/shared'
+import { computeRunEffects } from './effects-bus'
+import { MODIFIER_DEFS } from '@idle-vibes/shared'
 
 /**
  * Reset the colony for a new run while preserving meta state (Echoes,
@@ -51,7 +53,16 @@ export function computeEchoes(snapshot: WorldSnapshot): number {
   const bossBonus = snapshot.run.bossesKilled
   const shardPool = snapshot.resources.shards
   const base = 1 + Math.floor(shardPool / 10)
-  return Math.max(1, base + layerBonus + bossBonus * 2)
+
+  // Echoes gain multiplier: compound of echo-tree nodes and relic/modifier bonuses.
+  const effects = computeRunEffects(snapshot)
+  const modifierDef = snapshot.run.modifierId
+    ? MODIFIER_DEFS.find((m) => m.id === snapshot.run.modifierId)
+    : undefined
+  const modifierWeightBonus = modifierDef ? 1 + (modifierDef.weight - 1) * 0.2 : 1
+
+  const raw = (base + layerBonus + bossBonus * 2) * effects.echoesGainMul * modifierWeightBonus
+  return Math.max(1, Math.floor(raw))
 }
 
 function hashRunSeed(prestigeCount: number): number {

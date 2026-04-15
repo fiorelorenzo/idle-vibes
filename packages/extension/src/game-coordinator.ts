@@ -21,7 +21,8 @@ import { WaveClock } from './sim/wave-clock'
 import { ExpeditionManager } from './sim/expedition-manager'
 import type { CloudSyncService } from './cloud/sync-service'
 import { performPrestige, computeEchoes } from './sim/prestige'
-import { rollModifierChoices, resolveModifier } from './sim/modifier-engine'
+import { rollModifierChoices } from './sim/modifier-engine'
+import { computeRunEffects } from './sim/effects-bus'
 import { ECHO_NODE_DEFS, LAYER_INDEX } from '@idle-vibes/shared'
 
 /**
@@ -61,7 +62,7 @@ export class GameCoordinator {
     this.heartbeat.start((event) => this.emitEvent(event))
     this.drama.start((event) => this.emitEvent(event))
     this.waves.start(this.drama, (event) => this.emitEvent(event))
-    this.expeditions.attach(this.snapshot, (event) => this.emitEvent(event))
+    this.reattachExpeditions()
     return { dispose: () => this.stop() }
   }
 
@@ -84,7 +85,7 @@ export class GameCoordinator {
   }
 
   handleParserSignal(signal: ParserSignal): void {
-    const effects = resolveModifier(this.snapshot)
+    const effects = computeRunEffects(this.snapshot)
     const events = this.rateLimiter.translate(signal, effects)
     for (const event of events) {
       this.emitEvent(event)
@@ -110,15 +111,35 @@ export class GameCoordinator {
 
   private prestige(): void {
     performPrestige(this.snapshot)
-    this.expeditions.stop()
-    this.expeditions = new ExpeditionManager()
-    this.expeditions.attach(this.snapshot, (event) => this.emitEvent(event))
+    this.applyStartingBonuses()
+    this.reattachExpeditions()
     this.persist()
     this.sendSnapshot()
   }
 
+  /**
+   * Seeds the fresh snapshot with starting tokens/shards/relic-slot
+   * changes driven by the Echo Tree. Called after prestige + on every
+   * resetLocalState.
+   */
+  private applyStartingBonuses(): void {
+    const effects = computeRunEffects(this.snapshot)
+    this.snapshot.resources.tokens += effects.startingTokens
+    this.snapshot.resources.shards += effects.startingShards
+  }
+
   getEchoPreview(): number {
     return computeEchoes(this.snapshot)
+  }
+
+  private reattachExpeditions(): void {
+    this.expeditions.stop()
+    this.expeditions = new ExpeditionManager()
+    this.expeditions.attach(
+      this.snapshot,
+      (event) => this.emitEvent(event),
+      () => computeRunEffects(this.snapshot),
+    )
   }
 
   /** Returns 3 random modifier ids for the run picker. */
@@ -266,9 +287,8 @@ export class GameCoordinator {
    */
   resetLocalState(): void {
     this.snapshot = createDefaultSnapshot()
-    this.expeditions.stop()
-    this.expeditions = new ExpeditionManager()
-    this.expeditions.attach(this.snapshot, (event) => this.emitEvent(event))
+    this.applyStartingBonuses()
+    this.reattachExpeditions()
     this.sendSnapshot()
     this.persist()
   }
@@ -295,10 +315,7 @@ export class GameCoordinator {
     // If the cloud save is newer than our local snapshot, replace.
     if (remote.snapshot.savedAt > this.snapshot.savedAt) {
       this.snapshot = remote.snapshot
-      // Re-attach expedition timers for the restored snapshot.
-      this.expeditions.stop()
-      this.expeditions = new ExpeditionManager()
-      this.expeditions.attach(this.snapshot, (event) => this.emitEvent(event))
+      this.reattachExpeditions()
       this.sendSnapshot()
       this.persist()
     }

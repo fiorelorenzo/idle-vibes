@@ -12,6 +12,7 @@
   import PrestigeButton from './lib/components/PrestigeButton.svelte'
   import RelicTray from './lib/components/RelicTray.svelte'
   import MetaToolbar from './lib/components/MetaToolbar.svelte'
+  import TutorialOverlay from './lib/components/TutorialOverlay.svelte'
 
   onMount(() => {
     initThemeStore()
@@ -51,6 +52,7 @@
   <PrestigeButton />
   <CommandBar />
   <MetaToolbar />
+  <TutorialOverlay />
 </main>
 
 <style>

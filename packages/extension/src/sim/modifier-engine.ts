@@ -2,9 +2,10 @@ import type { WorldSnapshot } from '@idle-vibes/shared'
 import { MODIFIER_DEFS } from '@idle-vibes/shared'
 
 /**
- * Translates an active run modifier id into concrete multipliers applied
- * at the host coordinator level. This keeps modifier behavior out of the
- * webview ECS — the ECS just sees different event payloads.
+ * Coarse modifier effects resolved from the active run modifier id.
+ * The EffectsBus handles the full per-id branching; this record just
+ * captures the most common multipliers so unit-test-style fallbacks
+ * keep working even if the bus isn't invoked.
  */
 export interface ModifierEffects {
   moteValueMul: number
@@ -35,17 +36,16 @@ export function resolveModifier(snapshot: WorldSnapshot): ModifierEffects {
   switch (def.effectId) {
     case 'flow_glutton':
       return { ...DEFAULT, moteValueMul: 2, expeditionDisabled: true }
-    case 'iron_wardens':
-      return { ...DEFAULT }
-    case 'recursion_echo':
-      return { ...DEFAULT, commitMultiplier: 2, glitchSpawnMul: 1.5 }
     case 'delver_rush':
       return { ...DEFAULT, expeditionDurationMul: 0.5 }
     case 'silent_run':
       return { ...DEFAULT, suppressMoteRainUntilCommit: true }
     case 'glass_core':
       return { ...DEFAULT, focusMul: 2, coreHpMul: 0.5 }
+    case 'recursion_echo':
+      return { ...DEFAULT, commitMultiplier: 2, glitchSpawnMul: 1.5 }
     default:
+      // Richer modifier effects are handled directly in effects-bus.ts.
       return { ...DEFAULT }
   }
 }
